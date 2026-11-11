@@ -1,0 +1,37 @@
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN dpkg --add-architecture armhf && \
+    apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        make \
+        pkg-config \
+        gcc-arm-linux-gnueabihf \
+        g++-arm-linux-gnueabihf \
+        libsdl2-dev:armhf \
+        libsdl2-image-dev:armhf \
+        libsdl2-ttf-dev:armhf \
+        libasound2-dev:armhf \
+        libpng-dev:armhf \
+        zlib1g-dev:armhf \
+        libgles2-mesa-dev:armhf \
+        libsamplerate0-dev:armhf \
+        libsqlite3-dev:armhf \
+        libssl-dev:armhf \
+        libzip-dev:armhf \
+        liblz4-dev:armhf \
+        ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV CROSS_COMPILE=arm-linux-gnueabihf-
+ENV CROSS_TRIPLE=arm-linux-gnueabihf
+ENV ARCH=arm
+ENV PREFIX=/usr
+ENV PREFIX_LOCAL=/root/workspace/build/r36j/usr
+ENV PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
+
+WORKDIR /root/workspace
+CMD ["/bin/bash"]
