@@ -15,6 +15,7 @@ adb push "$DIST/paks/." /userdata/nextui/paks/
 adb push "$DIST/shaders/." /userdata/nextui/shaders/
 adb push "$DIST/res/." /userdata/nextui/res/
 adb push "$DIST/start_nextui.sh" /userdata/nextui/start_nextui.sh
+adb push "$DIST/version.txt" /userdata/nextui/version.txt
 adb push "$TOOLS/." /userdata/Tools/r36j/
 
 echo "Fixing permissions and running startup setup..."

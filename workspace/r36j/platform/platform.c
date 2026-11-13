@@ -335,8 +335,38 @@ static void set_axp22_chgled(bool enable) {
 	putFile((char *)path, cmd);
 }
 
+static void sunxi_reg_rmw(const char *addr, uint32_t mask, uint32_t val) {
+	const char *dump_path = "/sys/class/sunxi_dump/dump";
+	const char *write_path = "/sys/class/sunxi_dump/write";
+	if (access(dump_path, W_OK) != 0 || access(write_path, W_OK) != 0) return;
+	char addr_cmd[24];
+	snprintf(addr_cmd, sizeof(addr_cmd), "%s\n", addr);
+	putFile((char *)dump_path, addr_cmd);
+	char buf[32] = {0};
+	getFile((char *)dump_path, buf, sizeof(buf));
+	if (!buf[0]) return;
+	uint32_t cur = (uint32_t)strtoul(buf, NULL, 16);
+	uint32_t next = (cur & ~mask) | (val & mask);
+	char cmd[48];
+	snprintf(cmd, sizeof(cmd), "%s 0x%08x\n", addr, next);
+	putFile((char *)write_path, cmd);
+}
+
+static void set_gpio_leds(bool enable) {
+	if (enable) {
+		sunxi_reg_rmw("0x01c20894", 0x07000000U, 0x01000000U); // PE14 mux -> output
+		sunxi_reg_rmw("0x01f02c00", 0x00000700U, 0x00000100U); // PL2 mux -> output
+	} else {
+		sunxi_reg_rmw("0x01c20894", 0x07000000U, 0x07000000U); // PE14 mux -> Hi-Z
+		sunxi_reg_rmw("0x01c208ac", 0x30000000U, 0x20000000U); // PE14 pull-down
+		sunxi_reg_rmw("0x01f02c00", 0x00000700U, 0x00000700U); // PL2 mux -> Hi-Z
+		sunxi_reg_rmw("0x01f02c1c", 0x00000030U, 0x00000020U); // PL2 pull-down
+	}
+}
+
 void PLAT_powerOff(int reboot) {
 	set_axp22_chgled(true);
+	set_gpio_leds(true);
 	PLAT_enableBacklight(0);
 	if (reboot) system("reboot");
 	else system("poweroff");

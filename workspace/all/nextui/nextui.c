@@ -2853,23 +2853,25 @@ int main (int argc, char *argv[]) {
 						SDL_LockMutex(fontMutex);
 						text = TTF_RenderUTF8_Blended(font.large, display_name, textColor);
 						SDL_UnlockMutex(fontMutex);
-						const int text_offset_y = (SCALE1(PILL_SIZE) - text->h + 1) >> 1;
 						GFX_blitPillLight(ASSET_WHITE_PILL, screen, &(SDL_Rect){
 							SCALE1(PADDING),
 							SCALE1(PADDING),
 							max_width,
 							SCALE1(PILL_SIZE)
 						});
-						SDL_BlitSurface(text, &(SDL_Rect){
-							0,
-							0,
-							max_width-SCALE1(BUTTON_PADDING*2),
-							text->h
-						}, screen, &(SDL_Rect){
-							SCALE1(PADDING+BUTTON_PADDING),
-							SCALE1(PADDING) + text_offset_y,
-						});
-						SDL_FreeSurface(text);
+						if (text) {
+							const int text_offset_y = (SCALE1(PILL_SIZE) - text->h + 1) >> 1;
+							SDL_BlitSurface(text, &(SDL_Rect){
+								0,
+								0,
+								max_width-SCALE1(BUTTON_PADDING*2),
+								text->h
+							}, screen, &(SDL_Rect){
+								SCALE1(PADDING+BUTTON_PADDING),
+								SCALE1(PADDING) + text_offset_y,
+							});
+							SDL_FreeSurface(text);
+						}
 					}
 
 					GFX_blitButtonGroup((char*[]){ "B","BACK",  NULL }, 0, screen, 0);
@@ -3111,7 +3113,7 @@ int main (int argc, char *argv[]) {
 						SDL_Surface* text_unique = TTF_RenderUTF8_Blended(font.large, display_name, COLOR_DARK_TEXT);
 						SDL_UnlockMutex(fontMutex);
 						// TODO: Use actual font metrics to center, this only works in simple cases
-						const int text_offset_y = (SCALE1(PILL_SIZE) - text->h + 1) >> 1;
+						const int text_offset_y = text ? ((SCALE1(PILL_SIZE) - text->h + 1) >> 1) : 0;
 						if (row_is_selected) {
 							is_scrolling = list_show_entry_names && GFX_textShouldScroll(font.large,display_name, max_width - SCALE1(BUTTON_PADDING*2), fontMutex);
 							GFX_resetScrollText();
@@ -3139,15 +3141,15 @@ int main (int argc, char *argv[]) {
 							task->entry_name = strdup(notext ? " " : entry_name);
 							animPill(task);
 						}
-						SDL_Rect text_rect = { 0, 0, max_width - SCALE1(BUTTON_PADDING*2), text->h };
-						SDL_Rect dest_rect = { SCALE1(BUTTON_MARGIN + BUTTON_PADDING), SCALE1(PADDING + (j * PILL_SIZE)) + text_offset_y };
-
-						if(list_show_entry_names) {
-							SDL_BlitSurface(text_unique, &text_rect, screen, &dest_rect);
+						if(list_show_entry_names && text) {
+							SDL_Rect text_rect = { 0, 0, max_width - SCALE1(BUTTON_PADDING*2), text->h };
+							SDL_Rect dest_rect = { SCALE1(BUTTON_MARGIN + BUTTON_PADDING), SCALE1(PADDING + (j * PILL_SIZE)) + text_offset_y };
+							if (text_unique)
+								SDL_BlitSurface(text_unique, &text_rect, screen, &dest_rect);
 							SDL_BlitSurface(text, &text_rect, screen, &dest_rect);
 						}
-						SDL_FreeSurface(text_unique); // Free after use
-						SDL_FreeSurface(text); // Free after use
+						if (text_unique) SDL_FreeSurface(text_unique); // Free after use
+						if (text) SDL_FreeSurface(text); // Free after use
 					}
 					if(lastScreen==SCREEN_GAMESWITCHER) {
 						if(switcherSur) {

@@ -23,6 +23,7 @@ cp -r "$SCRIPT_DIR/skeleton/SYSTEM/r36j/shaders/"* "$DIST/shaders/" 2>/dev/null 
 cp -r "$SCRIPT_DIR/skeleton/SYSTEM/res/"* "$DIST/res/" 2>/dev/null || true
 cp "$SCRIPT_DIR/skeleton/SYSTEM/r36j/system.cfg" "$DIST/system.cfg" 2>/dev/null || true
 cp "$SCRIPT_DIR/skeleton/SYSTEM/r36j/start_nextui.sh" "$DIST/start_nextui.sh" 2>/dev/null || true
+git -C "$SCRIPT_DIR" rev-parse --short HEAD > "$DIST/version.txt" 2>/dev/null || echo "r36j" > "$DIST/version.txt"
 
 cp "$SCRIPT_DIR/workspace/all/"*/build/r36j/*.elf "$DIST/bin/"
 cp "$SCRIPT_DIR/workspace/r36j/keymon/keymon.elf" "$DIST/bin/"

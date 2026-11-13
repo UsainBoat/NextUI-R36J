@@ -202,15 +202,22 @@ public:
         : AbstractMenuItem(type, name, desc, on_get) {}
 
     const std::any getValue() const override {
-        assert(on_get);
         if(on_get)
             return on_get();
         return {};
     }
     const std::string getLabel() const override {
         auto v = getValue();
-        assert(v.has_value());
-        return std::any_cast<const std::string>(v);
+        if (!v.has_value())
+            return "";
+        if (v.type() == typeid(std::string))
+            return std::any_cast<std::string>(v);
+        if (v.type() == typeid(const char*))
+        {
+            const char* s = std::any_cast<const char*>(v);
+            return s ? std::string(s) : "";
+        }
+        return "";
     }
 };
 

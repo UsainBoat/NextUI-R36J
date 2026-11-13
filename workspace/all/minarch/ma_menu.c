@@ -859,12 +859,14 @@ static int OptionAchievements_openMenu(MenuList* list, int i) {
 					}
 
 					// Title text
-					SDL_Surface* title_text = TTF_RenderUTF8_Blended(font.small, ach->title, text_color);
-					SDL_BlitSurface(title_text, NULL, screen, &(SDL_Rect){
-						text_x,
-						oy + SCALE1((row * BUTTON_SIZE) + 1)
-					});
-					SDL_FreeSurface(title_text);
+					SDL_Surface* title_text = TTF_RenderUTF8_Blended(font.small, ach->title ? ach->title : "", text_color);
+					if (title_text) {
+						SDL_BlitSurface(title_text, NULL, screen, &(SDL_Rect){
+							text_x,
+							oy + SCALE1((row * BUTTON_SIZE) + 1)
+						});
+						SDL_FreeSurface(title_text);
+					}
 				} else {
 					// Unselected row - just badge + title + indicators, no pills
 					int badge_display_size = SCALE1(BUTTON_SIZE - 4);
@@ -912,12 +914,14 @@ static int OptionAchievements_openMenu(MenuList* list, int i) {
 					}
 
 					// Title text (white for unselected)
-					SDL_Surface* title_text = TTF_RenderUTF8_Blended(font.small, ach->title, COLOR_WHITE);
-					SDL_BlitSurface(title_text, NULL, screen, &(SDL_Rect){
-						text_x,
-						oy + SCALE1((row * BUTTON_SIZE) + 1)
-					});
-					SDL_FreeSurface(title_text);
+					SDL_Surface* title_text = TTF_RenderUTF8_Blended(font.small, ach->title ? ach->title : "", COLOR_WHITE);
+					if (title_text) {
+						SDL_BlitSurface(title_text, NULL, screen, &(SDL_Rect){
+							text_x,
+							oy + SCALE1((row * BUTTON_SIZE) + 1)
+						});
+						SDL_FreeSurface(title_text);
+					}
 				}
 			}
 
@@ -1255,12 +1259,14 @@ int Menu_options(MenuList* list) {
 					
 					if (item->desc) desc = item->desc;
 				}
-				text = TTF_RenderUTF8_Blended(font.small, item->name, text_color);
-				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
-					ox+SCALE1(OPTION_PADDING),
-					oy+SCALE1((j*BUTTON_SIZE)+1)
-				});
-				SDL_FreeSurface(text);
+				text = TTF_RenderUTF8_Blended(font.small, item->name ? item->name : "", text_color);
+				if (text) {
+					SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
+						ox+SCALE1(OPTION_PADDING),
+						oy+SCALE1((j*BUTTON_SIZE)+1)
+					});
+					SDL_FreeSurface(text);
+				}
 			}
 		}
 		else if (type==MENU_FIXED) {
@@ -1290,11 +1296,13 @@ int Menu_options(MenuList* list) {
 				if (item->values == NULL) {
 					// This is a navigation item, used to displayed a specific category
 					text = TTF_RenderUTF8_Blended(font.small, ">", COLOR_WHITE); // always white
-					SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
-						ox + mw - text->w - SCALE1(OPTION_PADDING),
-						oy+SCALE1((j*BUTTON_SIZE)+3)
-					});
-					SDL_FreeSurface(text);
+					if (text) {
+						SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
+							ox + mw - text->w - SCALE1(OPTION_PADDING),
+							oy+SCALE1((j*BUTTON_SIZE)+3)
+						});
+						SDL_FreeSurface(text);
+					}
 				}
 				else {
 					if (item->value>=0) {
@@ -1330,12 +1338,14 @@ int Menu_options(MenuList* list) {
 					
 					if (item->desc) desc = item->desc;
 				}
-				text = TTF_RenderUTF8_Blended(font.small, item->name, text_color);
-				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
-					ox+SCALE1(OPTION_PADDING),
-					oy+SCALE1((j*BUTTON_SIZE)+1)
-				});
-				SDL_FreeSurface(text);
+				text = TTF_RenderUTF8_Blended(font.small, item->name ? item->name : "", text_color);
+				if (text) {
+					SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
+						ox+SCALE1(OPTION_PADDING),
+						oy+SCALE1((j*BUTTON_SIZE)+1)
+					});
+					SDL_FreeSurface(text);
+				}
 			}
 		}
 		else if (type==MENU_VAR || type==MENU_INPUT) {
@@ -1401,12 +1411,14 @@ int Menu_options(MenuList* list) {
 					
 					if (item->desc) desc = item->desc;
 				}
-				text = TTF_RenderUTF8_Blended(font.small, item->name, text_color);
-				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
-					ox+SCALE1(OPTION_PADDING),
-					oy+SCALE1((j*BUTTON_SIZE)+1)
-				});
-				SDL_FreeSurface(text);
+				text = TTF_RenderUTF8_Blended(font.small, item->name ? item->name : "", text_color);
+				if (text) {
+					SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
+						ox+SCALE1(OPTION_PADDING),
+						oy+SCALE1((j*BUTTON_SIZE)+1)
+					});
+					SDL_FreeSurface(text);
+				}
 				
 				if (await_input && j==selected_row) {
 					// buh
@@ -1415,12 +1427,15 @@ int Menu_options(MenuList* list) {
 					int count = 0;
 					while ( item->values && item->values[count]) count++;
 					if (item->value >= 0 && item->value < count) {
-						text = TTF_RenderUTF8_Blended(font.tiny, item->values[item->value], COLOR_WHITE); // always white
-						SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
-							ox + mw - text->w - SCALE1(OPTION_PADDING),
-							oy+SCALE1((j*BUTTON_SIZE)+3)
-						});
-						SDL_FreeSurface(text);
+						const char *val_str = item->values[item->value];
+						text = TTF_RenderUTF8_Blended(font.tiny, val_str ? val_str : "", COLOR_WHITE); // always white
+						if (text) {
+							SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
+								ox + mw - text->w - SCALE1(OPTION_PADDING),
+								oy+SCALE1((j*BUTTON_SIZE)+3)
+							});
+							SDL_FreeSurface(text);
+						}
 					}
 				}
 			}
@@ -1963,16 +1978,18 @@ void Menu_loop(void) {
 				max_width,
 				SCALE1(PILL_SIZE)
 			});
-			SDL_BlitSurface(text, &(SDL_Rect){
-				0,
-				0,
-				max_width-SCALE1(BUTTON_PADDING*2),
-				text->h
-			}, screen, &(SDL_Rect){
-				SCALE1(PADDING+BUTTON_PADDING),
-				SCALE1(PADDING+4)
-			});
-			SDL_FreeSurface(text);
+			if (text) {
+				SDL_BlitSurface(text, &(SDL_Rect){
+					0,
+					0,
+					max_width-SCALE1(BUTTON_PADDING*2),
+					text->h
+				}, screen, &(SDL_Rect){
+					SCALE1(PADDING+BUTTON_PADDING),
+					SCALE1(PADDING+4)
+				});
+				SDL_FreeSurface(text);
+			}
 			
 			if (show_setting && !GetHDMI()) GFX_blitHardwareHints(screen, show_setting);
 			else GFX_blitButtonGroup((char*[]){ BTN_SLEEP==BTN_POWER?"POWER":"MENU","SLEEP", NULL }, 0, screen, 0);
@@ -1996,11 +2013,13 @@ void Menu_loop(void) {
 							SCALE1(PILL_SIZE)
 						});
 						text = TTF_RenderUTF8_Blended(font.large, disc_name, text_color);
-						SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
-							screen->w - SCALE1(PADDING + BUTTON_PADDING) - text->w,
-							SCALE1(oy + PADDING + 4)
-						});
-						SDL_FreeSurface(text);
+						if (text) {
+							SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
+								screen->w - SCALE1(PADDING + BUTTON_PADDING) - text->w,
+								SCALE1(oy + PADDING + 4)
+							});
+							SDL_FreeSurface(text);
+						}
 					}
 					
 					TTF_SizeUTF8(font.large, item, &ow, NULL);
@@ -2017,12 +2036,14 @@ void Menu_loop(void) {
 			
 				
 				// text
-				text = TTF_RenderUTF8_Blended(font.large, item, text_color);
-				SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
-					SCALE1(PADDING + BUTTON_PADDING),
-					SCALE1(oy + PADDING + (i * PILL_SIZE) + 4)
-				});
-				SDL_FreeSurface(text);
+				text = TTF_RenderUTF8_Blended(font.large, item ? item : "", text_color);
+				if (text) {
+					SDL_BlitSurface(text, NULL, screen, &(SDL_Rect){
+						SCALE1(PADDING + BUTTON_PADDING),
+						SCALE1(oy + PADDING + (i * PILL_SIZE) + 4)
+					});
+					SDL_FreeSurface(text);
+				}
 			}
 			
 			// slot preview

@@ -57,7 +57,6 @@ MenuItem::MenuItem(ListItemType type, const std::string &name, const std::string
 
     generateDefaultLabels(suffix);
     initSelection();
-    assert(valueIdx >= 0);
 }
 
 MenuItem::MenuItem(ListItemType type, const std::string &name, const std::string &desc,
@@ -96,85 +95,89 @@ void MenuItem::initSelection()
         {
             // we know we can convert both std::any values to the same type
             const auto initialVal = on_get();
-            try
+            if (initialVal.has_value())
             {
-                for (int i = 0; i < values.size(); i++)
+                try
                 {
-                    const auto &v = values[i];
-                    if (v.type() != initialVal.type())
-                        LOG_error("type mismatch: %s vs. %s", v.type().name(), initialVal.type().name());
+                    for (int i = 0; i < values.size(); i++)
+                    {
+                        const auto &v = values[i];
+                        if (v.type() != initialVal.type())
+                        {
+                            LOG_error("type mismatch for %s: %s vs. %s\n", this->getName().c_str(), v.type().name(), initialVal.type().name());
+                            continue;
+                        }
 
-                    assert(v.type() == initialVal.type());
-
-                    if (v.type() == typeid(float))
-                    {
-                        if (std::any_cast<float>(initialVal) == std::any_cast<float>(v))
+                        if (v.type() == typeid(float))
                         {
-                            valueIdx = i;
-                            break;
+                            if (std::any_cast<float>(initialVal) == std::any_cast<float>(v))
+                            {
+                                valueIdx = i;
+                                break;
+                            }
                         }
-                    }
-                    else if (v.type() == typeid(int))
-                    {
-                        if (std::any_cast<int>(initialVal) == std::any_cast<int>(v))
+                        else if (v.type() == typeid(int))
                         {
-                            valueIdx = i;
-                            break;
+                            if (std::any_cast<int>(initialVal) == std::any_cast<int>(v))
+                            {
+                                valueIdx = i;
+                                break;
+                            }
                         }
-                    }
-                    else if (v.type() == typeid(unsigned int))
-                    {
-                        if (std::any_cast<unsigned int>(initialVal) == std::any_cast<unsigned int>(v))
+                        else if (v.type() == typeid(unsigned int))
                         {
-                            valueIdx = i;
-                            break;
+                            if (std::any_cast<unsigned int>(initialVal) == std::any_cast<unsigned int>(v))
+                            {
+                                valueIdx = i;
+                                break;
+                            }
                         }
-                    }
-                    else if (v.type() == typeid(uint32_t))
-                    {
-                        if (std::any_cast<uint32_t>(initialVal) == std::any_cast<uint32_t>(v))
+                        else if (v.type() == typeid(uint32_t))
                         {
-                            valueIdx = i;
-                            break;
+                            if (std::any_cast<uint32_t>(initialVal) == std::any_cast<uint32_t>(v))
+                            {
+                                valueIdx = i;
+                                break;
+                            }
                         }
-                    }
-                    else if (v.type() == typeid(bool))
-                    {
-                        if (std::any_cast<bool>(initialVal) == std::any_cast<bool>(v))
+                        else if (v.type() == typeid(bool))
                         {
-                            valueIdx = i;
-                            break;
+                            if (std::any_cast<bool>(initialVal) == std::any_cast<bool>(v))
+                            {
+                                valueIdx = i;
+                                break;
+                            }
                         }
-                    }
-                    else if (v.type() == typeid(std::string))
-                    {
-                        if (std::any_cast<std::string>(initialVal) == std::any_cast<std::string>(v))
+                        else if (v.type() == typeid(std::string))
                         {
-                            //LOG_info("Found equal strings %s and %s\n", initialVal, v);
-                            valueIdx = i;
-                            break;
+                            if (std::any_cast<std::string>(initialVal) == std::any_cast<std::string>(v))
+                            {
+                                //LOG_info("Found equal strings %s and %s\n", initialVal, v);
+                                valueIdx = i;
+                                break;
+                            }
                         }
-                    }
-                    else if (v.type() == typeid(std::basic_string<char>))
-                    {
-                        if (std::any_cast<std::basic_string<char>>(initialVal) == std::any_cast<std::basic_string<char>>(v))
+                        else if (v.type() == typeid(std::basic_string<char>))
                         {
-                            //LOG_info("Found equal basic strings %s and %s\n", initialVal, v);
-                            valueIdx = i;
-                            break;
+                            if (std::any_cast<std::basic_string<char>>(initialVal) == std::any_cast<std::basic_string<char>>(v))
+                            {
+                                //LOG_info("Found equal basic strings %s and %s\n", initialVal, v);
+                                valueIdx = i;
+                                break;
+                            }
                         }
-                    }
-                    else
-                    {
-                        LOG_warn("Cant initialize selection for %s from unknown type %s\n", this->getLabel(), v.type().name());
-                        // assert(false);
+                        else
+                        {
+                            LOG_warn("Cant initialize selection for %s from unknown type %s\n", this->getName().c_str(), v.type().name());
+                            // assert(false);
+                        }
                     }
                 }
-            }
-            catch (...)
-            {
-                // bad any cast
-                LOG_warn("Bad any cast for %s\n", this->getLabel());
+                catch (...)
+                {
+                    // bad any cast
+                    LOG_warn("Bad any cast for %s\n", this->getName().c_str());
+                }
             }
             // this sadly doesnt work with std::any
             // auto it = std::find(values.cbegin(), values.cend(), on_get());
@@ -183,7 +186,6 @@ void MenuItem::initSelection()
             // else
             //    valueIdx = std::distance(values.cbegin(), it);
         }
-        assert(valueIdx >= 0);
     }
 }
 
@@ -658,8 +660,11 @@ void MenuList::drawListItem(SDL_Surface *surface, const SDL_Rect &dst, const Abs
         text_color = uintToColour(THEME_COLOR5_255);
     }
     text = TTF_RenderUTF8_Blended(font.small, item.getName().c_str(), text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y  + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    if (text)
+    {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 }
 
 void MenuList::drawFixed(SDL_Surface *surface, const SDL_Rect &dst, const SDL_Rect &dstTitle)
@@ -743,7 +748,12 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
             char hexLabel[12];
             snprintf(hexLabel, sizeof(hexLabel), "0x%08X", rawColor);
             text = TTF_RenderUTF8_Blended(font.tiny, hexLabel, text_color_value);
-            SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING + COLOR_PADDING + FONT_TINY), dst.y + ((dst.h - text->h) / 2)});
+            if (text)
+            {
+                SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING + COLOR_PADDING + FONT_TINY), dst.y + ((dst.h - text->h) / 2)});
+                SDL_FreeSurface(text);
+                text = nullptr;
+            }
         }
         else if(item.getType() == ListItemType::Button) {
             // dont draw anything for now, could be a button hint later
@@ -751,9 +761,10 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
         else if(item.getType() == ListItemType::Custom) {
             item.drawCustomItem(surface, dst, item, selected);
         }
-        else // Generic and fallback
+        else if (text) // Generic and fallback
             SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
-        SDL_FreeSurface(text);
+        if (text)
+            SDL_FreeSurface(text);
     }
 
     // TODO: blit a black pill on unselected rows (to cover longer item->values?) or truncate longer item->values?
@@ -768,8 +779,11 @@ void MenuList::drawFixedItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
     }
 
     text = TTF_RenderUTF8_Blended(font.small, item.getName().c_str(), text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    if (text)
+    {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 }
 
 void MenuList::drawInput(SDL_Surface *surface, const SDL_Rect &dst, const SDL_Rect &dstTitle)
@@ -823,8 +837,11 @@ void MenuList::drawInputItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
         text_color = COLOR_BLACK;
     }
     text = TTF_RenderUTF8_Blended(font.small, item.getName().c_str(), text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    if (text)
+    {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 
     if (/*await_input &&*/ selected)
     {
@@ -833,8 +850,11 @@ void MenuList::drawInputItem(SDL_Surface *surface, const SDL_Rect &dst, const Ab
     else if (item.getValue().has_value())
     {
         text = TTF_RenderUTF8_Blended(font.tiny, item.getLabel().c_str(), COLOR_WHITE); // always white
-        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
-        SDL_FreeSurface(text);
+        if (text)
+        {
+            SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + mw - text->w - SCALE1(OPTION_PADDING), dst.y + ((dst.h - text->h) / 2)});
+            SDL_FreeSurface(text);
+        }
     }
 }
 
@@ -885,8 +905,11 @@ void MenuList::drawMainItem(SDL_Surface *surface, const SDL_Rect &dst, const Abs
         // TODO: port this over when needed. Its complete spaghetti code...
     }
     text = TTF_RenderUTF8_Blended(font.large, truncated, text_color);
-    SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(BUTTON_PADDING), dst.y + ((dst.h - text->h) / 2)});
-    SDL_FreeSurface(text);
+    if (text)
+    {
+        SDL_BlitSurfaceCPP(text, {}, surface, {dst.x + SCALE1(BUTTON_PADDING), dst.y + ((dst.h - text->h) / 2)});
+        SDL_FreeSurface(text);
+    }
 }
 
 void MenuList::resetAllItems()

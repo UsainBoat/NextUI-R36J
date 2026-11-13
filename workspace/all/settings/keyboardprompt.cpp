@@ -322,24 +322,29 @@ void KeyboardPrompt::drawKeyboard(SDL_Surface *screen, const AppState &state)
     if (!state.keyboard.title.empty())
     {
         SDL_Surface *title = TTF_RenderUTF8_Blended(font.large, state.keyboard.title.c_str(), COLOR_WHITE);
-        SDL_Rect title_pos = {
-            (screen->w - title->w) / 2, // center horizontally
-            20,                         // 20px from top
-            title->w,
-            title->h};
-        SDL_BlitSurface(title, NULL, screen, &title_pos);
-        SDL_FreeSurface(title);
+        if (title)
+        {
+            SDL_Rect title_pos = {
+                (screen->w - title->w) / 2, // center horizontally
+                20,                         // 20px from top
+                title->w,
+                title->h};
+            SDL_BlitSurface(title, NULL, screen, &title_pos);
+            SDL_FreeSurface(title);
+        }
     }
 
     // draw input field with current text
     // todo: use TTF_SizeUTF8 to compute the width of the input field
     SDL_Surface *input_placeholder = TTF_RenderUTF8_Blended(font.medium, "p", COLOR_WHITE);
     SDL_Surface *input = TTF_RenderUTF8_Blended(font.medium, state.keyboard.current_text.c_str(), COLOR_WHITE);
+    int placeholder_w = input_placeholder ? input_placeholder->w : SCALE1(16);
+    int placeholder_h = input_placeholder ? input_placeholder->h : SCALE1(24);
     SDL_Rect input_pos = {
         (screen->w) / 2,
-        input_placeholder->h * 2,
+        placeholder_h * 2,
         0,
-        input_placeholder->h};
+        placeholder_h};
     if (input != NULL)
     {
         input_pos.x = (screen->w - input->w) / 2;
@@ -350,17 +355,22 @@ void KeyboardPrompt::drawKeyboard(SDL_Surface *screen, const AppState &state)
     // draw input field background
     SDL_Rect input_bg = {
         40,
-        input_placeholder->h * 2,
+        placeholder_h * 2,
         screen->w - 80,
-        input_placeholder->h};
+        placeholder_h};
     SDL_FillRect(screen, &input_bg, SDL_MapRGB(screen->format, TRIAD_DARK_GRAY));
-    SDL_BlitSurface(input, NULL, screen, &input_pos);
-    SDL_FreeSurface(input);
+    if (input != NULL)
+    {
+        SDL_BlitSurface(input, NULL, screen, &input_pos);
+        SDL_FreeSurface(input);
+    }
 
     // draw keyboard layout
-    int start_y = input_placeholder->h * 4;
-    int default_key_width = input_placeholder->w;
-    int default_key_height = input_placeholder->h;
+    int start_y = placeholder_h * 4;
+    int default_key_width = placeholder_w;
+    int default_key_height = placeholder_h;
+    if (input_placeholder)
+        SDL_FreeSurface(input_placeholder);
     int default_key_size = std::max(default_key_width, default_key_height);
     int row_spacing = 5;
     int column_spacing = 5;
@@ -432,14 +442,17 @@ void KeyboardPrompt::drawKeyboard(SDL_Surface *screen, const AppState &state)
             SDL_FillRect(screen, &key_pos, bg_color);
 
             // center text in key
-            SDL_Rect text_pos = {
-                key_pos.x + (current_key_width - key_text->w) / 2,
-                key_pos.y + (default_key_size - key_text->h) / 2,
-                key_text->w,
-                key_text->h};
+            if (key_text)
+            {
+                SDL_Rect text_pos = {
+                    key_pos.x + (current_key_width - key_text->w) / 2,
+                    key_pos.y + (default_key_size - key_text->h) / 2,
+                    key_text->w,
+                    key_text->h};
 
-            SDL_BlitSurface(key_text, NULL, screen, &text_pos);
-            SDL_FreeSurface(key_text);
+                SDL_BlitSurface(key_text, NULL, screen, &text_pos);
+                SDL_FreeSurface(key_text);
+            }
         }
     }
 }

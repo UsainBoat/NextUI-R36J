@@ -2133,9 +2133,11 @@ void GFX_blitButton(char *hint, char *button, SDL_Surface *dst, SDL_Rect *dst_re
 		else {
 			// label
 			text = TTF_RenderUTF8_Blended(font.medium, button, ALT_BUTTON_TEXT_COLOR);
-			SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){dst_rect->x + (SCALE1(BUTTON_SIZE) - text->w) / 2, dst_rect->y + (SCALE1(BUTTON_SIZE) - text->h) / 2});
+			if (text) {
+				SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){dst_rect->x + (SCALE1(BUTTON_SIZE) - text->w) / 2, dst_rect->y + (SCALE1(BUTTON_SIZE) - text->h) / 2});
+				SDL_FreeSurface(text);
+			}
 			ox += SCALE1(BUTTON_SIZE);
-			SDL_FreeSurface(text);
 		}
 	}
 	else
@@ -2149,14 +2151,16 @@ void GFX_blitButton(char *hint, char *button, SDL_Surface *dst, SDL_Rect *dst_re
 		}
 		else {
 			text = TTF_RenderUTF8_Blended(special_case ? font.large : font.tiny, button, ALT_BUTTON_TEXT_COLOR);
-			GFX_blitPillDark(ASSET_BUTTON, dst, &(SDL_Rect){dst_rect->x, dst_rect->y, SCALE1(BUTTON_SIZE) / 2 + text->w, SCALE1(BUTTON_SIZE)});
-			ox += SCALE1(BUTTON_SIZE) / 4;
-	
-			int oy = special_case ? SCALE1(-2) : 0;
-			SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){ox + dst_rect->x, oy + dst_rect->y + (SCALE1(BUTTON_SIZE) - text->h) / 2, text->w, text->h});
-			ox += text->w;
-			ox += SCALE1(BUTTON_SIZE) / 4;
-			SDL_FreeSurface(text);
+			if (text) {
+				GFX_blitPillDark(ASSET_BUTTON, dst, &(SDL_Rect){dst_rect->x, dst_rect->y, SCALE1(BUTTON_SIZE) / 2 + text->w, SCALE1(BUTTON_SIZE)});
+				ox += SCALE1(BUTTON_SIZE) / 4;
+
+				int oy = special_case ? SCALE1(-2) : 0;
+				SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){ox + dst_rect->x, oy + dst_rect->y + (SCALE1(BUTTON_SIZE) - text->h) / 2, text->w, text->h});
+				ox += text->w;
+				ox += SCALE1(BUTTON_SIZE) / 4;
+				SDL_FreeSurface(text);
+			}
 		}
 	}
 
@@ -2165,8 +2169,10 @@ void GFX_blitButton(char *hint, char *button, SDL_Surface *dst, SDL_Rect *dst_re
 	// hint text
 	SDL_Color text_color = uintToColour(THEME_COLOR6_255);
 	text = TTF_RenderUTF8_Blended(font.small, hint, text_color);
-	SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){ox + dst_rect->x, dst_rect->y + (SCALE1(BUTTON_SIZE) - text->h) / 2, text->w, text->h});
-	SDL_FreeSurface(text);
+	if (text) {
+		SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){ox + dst_rect->x, dst_rect->y + (SCALE1(BUTTON_SIZE) - text->h) / 2, text->w, text->h});
+		SDL_FreeSurface(text);
+	}
 }
 void GFX_blitMessage(TTF_Font *font, char *msg, SDL_Surface *dst, SDL_Rect *dst_rect)
 {
@@ -2662,8 +2668,11 @@ void GFX_blitText(TTF_Font *font, const char *str, int leading, SDL_Color color,
 		if (len)
 		{
 			text = TTF_RenderUTF8_Blended(font, line, color);
-			SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){x + ((dst_rect->w - text->w) / 2), y + (i * leading)});
-			SDL_FreeSurface(text);
+			if (text)
+			{
+				SDL_BlitSurface(text, NULL, dst, &(SDL_Rect){x + ((dst_rect->w - text->w) / 2), y + (i * leading)});
+				SDL_FreeSurface(text);
+			}
 		}
 	}
 }

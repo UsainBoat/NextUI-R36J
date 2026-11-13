@@ -18,6 +18,27 @@ if [ -w /sys/devices/platform/axp22_board/axp22_reg ]; then
 		printf '0x32%02x\n' "$new32" > /sys/devices/platform/axp22_board/axp22_reg 2>/dev/null || true
 	fi
 fi
+
+# Disable status/battery LEDs (PE14 work_led & PL2 bat_led -> Hi-Z + pull-down)
+if [ -w /sys/class/sunxi_dump/dump ] && [ -w /sys/class/sunxi_dump/write ]; then
+	sunxi_rmw() {
+		addr="$1"
+		mask="$2"
+		val="$3"
+		echo "$addr" > /sys/class/sunxi_dump/dump 2>/dev/null || return 0
+		cur=$(cat /sys/class/sunxi_dump/dump 2>/dev/null)
+		[ -n "$cur" ] || return 0
+		next=$(awk -v c="$cur" -v m="$mask" -v v="$val" 'BEGIN {
+			c = strtonum(c); m = strtonum(m); v = strtonum(v);
+			printf "0x%08x", or(xor(c, and(c, m)), v);
+		}')
+		[ -n "$next" ] && echo "$addr $next" > /sys/class/sunxi_dump/write 2>/dev/null || true
+	}
+	sunxi_rmw 0x01c20894 0x07000000 0x07000000 # PE14 mux -> disable (Hi-Z)
+	sunxi_rmw 0x01c208ac 0x30000000 0x20000000 # PE14 pull -> pull-down
+	sunxi_rmw 0x01f02c00 0x00000700 0x00000700 # PL2 mux -> disable (Hi-Z)
+	sunxi_rmw 0x01f02c1c 0x00000030 0x00000020 # PL2 pull -> pull-down
+fi
 if pidof emulationstation >/dev/null 2>&1; then
 	echo "Stopping EmulationStation..."
 	/etc/init.d/S31emulationstation stop >/dev/null 2>&1 || killall -15 emulationstation || killall -9 emulationstation
@@ -96,9 +117,10 @@ if [ ! -e "/userdata/.system/r36j/bin" ]; then
 	ln -snf "$NEXTUI_DIR/shaders" /userdata/.system/r36j/shaders
 fi
 
-# Symlink NextUI res files to .system/res
+# Symlink NextUI res files and version.txt to .system
 mkdir -p /userdata/.system/res
 cp -rn "$NEXTUI_DIR/res/"* /userdata/.system/res/ 2>/dev/null || true
+[ -f "$NEXTUI_DIR/version.txt" ] && ln -snf "$NEXTUI_DIR/version.txt" /userdata/.system/version.txt
 
 # Launch NextUI
 export COMPAT_SDCARD_PATH="/userdata"

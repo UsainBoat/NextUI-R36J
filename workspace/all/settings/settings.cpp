@@ -1116,9 +1116,13 @@ int main(int argc, char *argv[])
             new StaticMenuItem{ListItemType::Generic, "NextUI version", "",
             []() -> std::any {
                 std::ifstream t(ROOT_SYSTEM_PATH "/version.txt");
+                if (!t) return std::string("Unknown");
                 std::stringstream buffer;
                 buffer << t.rdbuf();
-                return buffer.str();
+                std::string ver = buffer.str();
+                while (!ver.empty() && (ver.back() == '\n' || ver.back() == '\r'))
+                    ver.pop_back();
+                return ver.empty() ? std::string("Unknown") : ver;
             }},
             new StaticMenuItem{ListItemType::Generic, "Platform", "",
             []() -> std::any {
@@ -1233,8 +1237,11 @@ int main(int argc, char *argv[])
                     text = TTF_RenderUTF8_Blended(font.large, display_name, COLOR_WHITE);
                     SDL_Rect target = {SCALE1(PADDING), SCALE1(PADDING), max_width, SCALE1(PILL_SIZE)};
                     GFX_blitPillLight(ASSET_WHITE_PILL, ctx.screen, &target);
-                    SDL_BlitSurfaceCPP(text, {0, 0, max_width - SCALE1(BUTTON_PADDING * 2), text->h}, ctx.screen, {SCALE1(PADDING + BUTTON_PADDING), SCALE1(PADDING + 4)});
-                    SDL_FreeSurface(text);
+                    if (text)
+                    {
+                        SDL_BlitSurfaceCPP(text, {0, 0, max_width - SCALE1(BUTTON_PADDING * 2), text->h}, ctx.screen, {SCALE1(PADDING + BUTTON_PADDING), SCALE1(PADDING + 4)});
+                        SDL_FreeSurface(text);
+                    }
                 }
                 else {
                     // just set the titleRect and we will pass it on to the list to populate as needed

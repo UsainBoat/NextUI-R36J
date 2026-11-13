@@ -277,20 +277,26 @@ void ColorPickerMenu::drawSlider(SDL_Surface *surface, const SDL_Rect &row,
 
     // Channel label ("R", "G", "B", "A") — centered in fixed-width slot
     SDL_Surface *label_surf = TTF_RenderUTF8_Blended(font.small, label, text_color);
-    int label_x = row.x + SCALE1(OPTION_PADDING) + (label_fixed_w - label_surf->w) / 2;
-    SDL_BlitSurfaceCPP(label_surf, {}, surface,
-                       {label_x, row.y + (row.h - label_surf->h) / 2});
-    SDL_FreeSurface(label_surf);
+    if (label_surf)
+    {
+        int label_x = row.x + SCALE1(OPTION_PADDING) + (label_fixed_w - label_surf->w) / 2;
+        SDL_BlitSurfaceCPP(label_surf, {}, surface,
+                           {label_x, row.y + (row.h - label_surf->h) / 2});
+        SDL_FreeSurface(label_surf);
+    }
 
     // Hex value right-aligned in fixed-width slot
     char hex_str[4];
     snprintf(hex_str, sizeof(hex_str), "%02X", value);
     SDL_Surface *hex_surf = TTF_RenderUTF8_Blended(font.tiny, hex_str, text_color);
-    int hex_slot_x = row.x + row.w - SCALE1(OPTION_PADDING) - hex_fixed_w;
-    SDL_BlitSurfaceCPP(hex_surf, {}, surface,
-                       {hex_slot_x + (hex_fixed_w - hex_surf->w),
-                        row.y + (row.h - hex_surf->h) / 2});
-    SDL_FreeSurface(hex_surf);
+    if (hex_surf)
+    {
+        int hex_slot_x = row.x + row.w - SCALE1(OPTION_PADDING) - hex_fixed_w;
+        SDL_BlitSurfaceCPP(hex_surf, {}, surface,
+                           {hex_slot_x + (hex_fixed_w - hex_surf->w),
+                            row.y + (row.h - hex_surf->h) / 2});
+        SDL_FreeSurface(hex_surf);
+    }
 
     // Slider bar — stable bounds derived from fixed label/hex widths
     int bar_x = row.x + SCALE1(OPTION_PADDING) + label_fixed_w + SCALE1(OPTION_PADDING);
@@ -368,17 +374,24 @@ void ColorPickerMenu::drawPreset(SDL_Surface *surface, const SDL_Rect &row,
     snprintf(hex_str, sizeof(hex_str), "#%08X", preset.color);
     SDL_Surface *hex_surf = TTF_RenderUTF8_Blended(font.tiny, hex_str, text_color);
     int hex_x = sq_rect.x + sq + SCALE1(OPTION_PADDING / 2 + 2);
-    SDL_BlitSurfaceCPP(hex_surf, {}, surface,
-                       {hex_x, row.y + (row.h - hex_surf->h) / 2});
-    int hex_w = hex_surf->w;
-    SDL_FreeSurface(hex_surf);
+    int hex_w = 0;
+    if (hex_surf)
+    {
+        SDL_BlitSurfaceCPP(hex_surf, {}, surface,
+                           {hex_x, row.y + (row.h - hex_surf->h) / 2});
+        hex_w = hex_surf->w;
+        SDL_FreeSurface(hex_surf);
+    }
 
     // Name label
     SDL_Surface *name_surf = TTF_RenderUTF8_Blended(font.tiny, preset.label.c_str(), text_color);
-    SDL_BlitSurfaceCPP(name_surf, {}, surface,
-                       {hex_x + hex_w + SCALE1(OPTION_PADDING),
-                        row.y + (row.h - name_surf->h) / 2});
-    SDL_FreeSurface(name_surf);
+    if (name_surf)
+    {
+        SDL_BlitSurfaceCPP(name_surf, {}, surface,
+                           {hex_x + hex_w + SCALE1(OPTION_PADDING),
+                            row.y + (row.h - name_surf->h) / 2});
+        SDL_FreeSurface(name_surf);
+    }
 }
 
 void ColorPickerMenu::drawCustom(SDL_Surface *surface, const SDL_Rect &dst, const SDL_Rect &dstTitle)
@@ -390,9 +403,12 @@ void ColorPickerMenu::drawCustom(SDL_Surface *surface, const SDL_Rect &dst, cons
         GFX_truncateText(font.large, label_.c_str(), display_name,
                          dstTitle.w, SCALE1(OPTION_PADDING * 2));
         SDL_Surface *title_text = TTF_RenderUTF8_Blended(font.large, display_name, uintToColour(THEME_COLOR4_255));
-        // hate the hardcoded +4, but we are matching MinUI code here
-        SDL_BlitSurfaceCPP(title_text, {}, surface, {dstTitle.x + SCALE1(BUTTON_PADDING), dstTitle.y + 4, dstTitle.w - SCALE1(BUTTON_PADDING * 2), title_text->h});
-        SDL_FreeSurface(title_text);
+        if (title_text)
+        {
+            // hate the hardcoded +4, but we are matching MinUI code here
+            SDL_BlitSurfaceCPP(title_text, {}, surface, {dstTitle.x + SCALE1(BUTTON_PADDING), dstTitle.y + 4, dstTitle.w - SCALE1(BUTTON_PADDING * 2), title_text->h});
+            SDL_FreeSurface(title_text);
+        }
     }
 
     // Button hints at the bottom of the screen
