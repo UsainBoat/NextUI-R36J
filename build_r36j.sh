@@ -18,6 +18,7 @@ DIST="$SCRIPT_DIR/workspace/build/r36j/dist/nextui"
 mkdir -p "$DIST/bin" "$DIST/lib" "$DIST/cores" "$DIST/paks" "$DIST/res" "$DIST/shaders"
 
 cp -r "$SCRIPT_DIR/skeleton/SYSTEM/r36j/bin/"* "$DIST/bin/" 2>/dev/null || true
+cp -r "$SCRIPT_DIR/skeleton/SYSTEM/r36j/lib/"* "$DIST/lib/" 2>/dev/null || true
 cp -r "$SCRIPT_DIR/skeleton/SYSTEM/r36j/paks/"* "$DIST/paks/" 2>/dev/null || true
 cp -r "$SCRIPT_DIR/skeleton/SYSTEM/r36j/shaders/"* "$DIST/shaders/" 2>/dev/null || true
 cp -r "$SCRIPT_DIR/skeleton/SYSTEM/res/"* "$DIST/res/" 2>/dev/null || true

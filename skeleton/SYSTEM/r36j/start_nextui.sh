@@ -122,6 +122,28 @@ mkdir -p /userdata/.system/res
 cp -rn "$NEXTUI_DIR/res/"* /userdata/.system/res/ 2>/dev/null || true
 [ -f "$NEXTUI_DIR/version.txt" ] && ln -snf "$NEXTUI_DIR/version.txt" /userdata/.system/version.txt
 
+# Register out-of-tree RTL8821AU Wi-Fi driver for hotplug and load if attached
+if [ -f "$NEXTUI_DIR/lib/8821au.ko" ] && [ -d /lib/modules/3.4.39/extra ]; then
+	ln -snf "$NEXTUI_DIR/lib/8821au.ko" /lib/modules/3.4.39/extra/8821au.ko 2>/dev/null || true
+	depmod -a 3.4.39 >/dev/null 2>&1 || true
+	if ! grep -q '^8821au ' /proc/modules 2>/dev/null; then
+		for m in /sys/bus/usb/devices/*/modalias; do
+			[ -r "$m" ] || continue
+			mod=$(cat "$m" 2>/dev/null) || continue
+			case "$mod" in
+				usb:v*p*d*)
+					vp="${mod#usb:}"
+					vp="${vp%%d*}"
+					if grep -qi "^alias usb:${vp}d.* 8821au$" /lib/modules/3.4.39/modules.alias 2>/dev/null; then
+						modprobe -q 8821au 2>/dev/null || insmod "$NEXTUI_DIR/lib/8821au.ko" >/dev/null 2>&1 || true
+						break
+					fi
+					;;
+			esac
+		done
+	fi
+fi
+
 # Launch NextUI
 export COMPAT_SDCARD_PATH="/userdata"
 sh "$NEXTUI_DIR/paks/MinUI.pak/launch.sh"
