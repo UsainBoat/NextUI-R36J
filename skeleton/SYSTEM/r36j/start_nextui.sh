@@ -149,6 +149,40 @@ if [ -f "$NEXTUI_DIR/lib/8821au.ko" ] && [ -d /lib/modules/3.4.39/extra ]; then
 	fi
 fi
 
+# Ensure Wi-Fi powers on when enabled in NextUI or Batocera config
+if grep -q '^wifi=1$' /userdata/.userdata/shared/minuisettings.txt 2>/dev/null || \
+   grep -q '^wifi\.enabled=1$' /userdata/system/batocera.conf 2>/dev/null; then
+	(sleep 1; connmanctl enable wifi >/dev/null 2>&1) </dev/null >/dev/null 2>&1 &
+fi
+
+# Set up Dropbear SSH server on port 22 (persistent host key & authorized_keys under /userdata/system)
+if [ -x "$NEXTUI_DIR/bin/dropbearmulti" ]; then
+	for applet in dropbear dropbearkey scp dbclient; do
+		ln -snf "$NEXTUI_DIR/bin/dropbearmulti" "$NEXTUI_DIR/bin/$applet" 2>/dev/null || true
+		ln -snf "$NEXTUI_DIR/bin/dropbearmulti" "/usr/bin/$applet" 2>/dev/null || true
+	done
+	mkdir -p /userdata/system/ssh /userdata/system/.ssh
+	chmod 700 /userdata/system /userdata/system/.ssh 2>/dev/null || true
+	[ -f /userdata/system/.ssh/authorized_keys ] && chmod 600 /userdata/system/.ssh/authorized_keys 2>/dev/null || true
+	if [ ! -f /userdata/system/ssh/dropbear_ed25519_host_key ]; then
+		"$NEXTUI_DIR/bin/dropbearkey" -t ed25519 -f /userdata/system/ssh/dropbear_ed25519_host_key >/dev/null 2>&1 || true
+	fi
+	if ! pidof dropbear >/dev/null 2>&1 && [ -f /userdata/system/ssh/dropbear_ed25519_host_key ]; then
+		"$NEXTUI_DIR/bin/dropbear" -r /userdata/system/ssh/dropbear_ed25519_host_key -p 22 </dev/null >/dev/null 2>&1 || true
+	fi
+fi
+
+# Auto-recover adbd on USB unplug/replug
+if [ -x "$NEXTUI_DIR/bin/adbd_recover.sh" ]; then
+	chmod +x "$NEXTUI_DIR/bin/adbd_recover.sh" 2>/dev/null || true
+	cat > /etc/udev/rules.d/99-adbd-recover.rules 2>/dev/null <<EOF || true
+ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_NAME}=="usb", RUN+="$NEXTUI_DIR/bin/adbd_recover.sh udev"
+ACTION=="change", SUBSYSTEM=="android_usb", RUN+="$NEXTUI_DIR/bin/adbd_recover.sh udev"
+EOF
+	udevadm control --reload-rules >/dev/null 2>&1 || true
+	"$NEXTUI_DIR/bin/adbd_recover.sh" watch </dev/null >/dev/null 2>&1 &
+fi
+
 # Launch NextUI
 export COMPAT_SDCARD_PATH="/userdata"
 sh "$NEXTUI_DIR/paks/MinUI.pak/launch.sh"

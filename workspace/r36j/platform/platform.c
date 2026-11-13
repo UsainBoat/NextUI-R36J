@@ -822,6 +822,7 @@ void PLAT_wifiInit(void) {
 	PLAT_wifiDiagnosticsEnable(CFG_getWifiDiagnostics());
 	if (CFG_getWifi()) {
 		ensure_connman_running(true);
+		system("connmanctl enable wifi >/dev/null 2>&1 &");
 	}
 }
 
