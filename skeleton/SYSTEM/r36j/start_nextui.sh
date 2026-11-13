@@ -7,7 +7,17 @@ NEXTUI_DIR="$(cd "$(dirname "$0")" && pwd)"
 /etc/init.d/S90hotkeygen stop >/dev/null 2>&1 || true
 /etc/init.d/S60sunxi-joypad stop >/dev/null 2>&1 || true
 /etc/init.d/S13irqbalance stop >/dev/null 2>&1 || true
-killall -9 power-service thd retro-hotkeys retro-powerkey retro-battery hotkeygen sunxi-joypad irqbalance lircd connmand wpa_supplicant ntpd 2>/dev/null || true
+killall -9 power-service thd retro-hotkeys retro-powerkey retro-battery hotkeygen sunxi-joypad irqbalance lircd 2>/dev/null || true
+
+# Disable charging LED (AXP223 REG 0x32 CHGLED -> Hi-Z/off) while console is on
+if [ -w /sys/devices/platform/axp22_board/axp22_reg ]; then
+	echo 0x32 > /sys/devices/platform/axp22_board/axp22_reg 2>/dev/null || true
+	reg32_hex=$(cat /sys/devices/platform/axp22_board/axp22_reg 2>/dev/null | sed -n 's/.*=\([0-9a-fA-F]*\).*/\1/p')
+	if [ -n "$reg32_hex" ]; then
+		new32=$(( (0x$reg32_hex) & 0x47 ))
+		printf '0x32%02x\n' "$new32" > /sys/devices/platform/axp22_board/axp22_reg 2>/dev/null || true
+	fi
+fi
 if pidof emulationstation >/dev/null 2>&1; then
 	echo "Stopping EmulationStation..."
 	/etc/init.d/S31emulationstation stop >/dev/null 2>&1 || killall -15 emulationstation || killall -9 emulationstation

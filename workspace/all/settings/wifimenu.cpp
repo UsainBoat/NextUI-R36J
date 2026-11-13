@@ -103,15 +103,19 @@ void Menu::updater()
         {
             // scan for available networks and add a menu item for each
             WIFI_connection connection;
-            if(WIFI_connectionInfo(&connection) < 0)
+            if(WIFI_connectionInfo(&connection) < 0) {
+                SDL_Delay(500);
                 continue; // try again in a bit
+            }
 
             // grab list and compare it to previous result
             // only relayout the menu if changes happended
             std::vector<WIFI_network> scanResults(SCAN_MAX_RESULTS);
             int cnt = WIFI_scan(scanResults.data(), SCAN_MAX_RESULTS);
-            if(cnt < 0)
+            if(cnt < 0) {
+                SDL_Delay(500);
                 continue; // try again in a bit
+            }
 
             std::map<std::string, WIFI_network> scanSsids;
             for (int i = 0; i < cnt; i++)
