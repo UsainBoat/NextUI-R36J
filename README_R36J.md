@@ -27,9 +27,19 @@ This repository contains the port of **NextUI** for R36S clones ("Gaminja" / `r3
    - Dynamic CPU governor and frequency scaling (`interactive` / `conservative` / `performance` up to 1.344 GHz).
    - AXP223 PMIC battery status monitoring and backlight control via `libmsettings`.
 3. **Batocera Integration (`skeleton/SYSTEM/r36j/start_nextui.sh`)**:
-   - Stops EmulationStation and background Batocera daemons (`hotkeygen`, `retro-hotkeys`, `retro-powerkey`, `connmand`, `wpa_supplicant`) to reclaim RAM and prevent input conflicts.
+   - Stops EmulationStation and background Batocera daemons (`hotkeygen`, `sunxi-joypad`, `irqbalance`, `retro-hotkeys`, `retro-powerkey`, `connmand`, `wpa_supplicant`) to reclaim RAM and prevent input conflicts.
    - Automatically links Batocera's `/userdata/roms/*` directories into `/userdata/Roms/` with NextUI console tags and links pre-installed `/userdata/cores/*_libretro.so` into NextUI.
    - Links case-sensitive `/userdata/Saves`, `/userdata/Bios`, `/userdata/Cheats`, and `/userdata/Overlays` to Batocera's lowercase directories.
+
+---
+
+## Recommended Device Tweaks
+
+- **Enable zram swap** (keeps swapping off the SD card within 245 MB RAM):
+  ```bash
+  adb shell "mount -o remount,rw /boot && /usr/bin/batocera-settings-set -f /boot/batocera-boot.conf swap.zram.enabled 1 && mount -o remount,ro /boot && sync"
+  ```
+- **Custom early boot logo**: Replace `/boot-res/bootlogo.bmp` on the device with a **640×480 uncompressed 24-bit BMP**.
 
 ---
 

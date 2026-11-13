@@ -40,22 +40,82 @@ struct input_event {
 };
 
 #define R36J_INPUT_COUNT 8
+#define R36J_ABS_MAX 8
 #define EV_KEY 0x01
 #define EV_ABS 0x03
 
+struct r36j_input_absinfo {
+	int32_t value;
+	int32_t minimum;
+	int32_t maximum;
+	int32_t fuzz;
+	int32_t flat;
+	int32_t resolution;
+};
+#define R36J_EVIOCGABS(abs) _IOR('E', 0x40 + (abs), struct r36j_input_absinfo)
+
 static int input_fds[R36J_INPUT_COUNT];
+static int abs_min[R36J_INPUT_COUNT][R36J_ABS_MAX];
+static int abs_max[R36J_INPUT_COUNT][R36J_ABS_MAX];
+static int abs_valid[R36J_INPUT_COUNT][R36J_ABS_MAX];
 static uint32_t last_input_scan = 0;
 
 static void close_evdev_input(int i) {
 	if (i < 0 || i >= R36J_INPUT_COUNT || input_fds[i] < 0) return;
 	close(input_fds[i]);
 	input_fds[i] = -1;
+	memset(abs_valid[i], 0, sizeof(abs_valid[i]));
 }
 
 static void open_evdev_input(int i) {
+	char name_path[128];
+	char name[128] = {0};
+	snprintf(name_path, sizeof(name_path), "/sys/class/input/event%i/device/name", i);
+	getFile(name_path, name, sizeof(name));
+	trimTrailingNewlines(name);
+
+	// Skip duplicate userspace uinput mirrors and non-controller sensors
+	if (strcmp(name, "sunxi-joypad") == 0 ||
+		strcmp(name, "batocera hotkeys") == 0 ||
+		strcmp(name, "sunxi-ths") == 0) {
+		return;
+	}
+
 	char path[64];
 	snprintf(path, sizeof(path), "/dev/input/event%i", i);
 	input_fds[i] = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+	if (input_fds[i] < 0) return;
+
+	memset(abs_valid[i], 0, sizeof(abs_valid[i]));
+	const int axes[] = { AXIS_LX, AXIS_LY, AXIS_RX, AXIS_RY };
+	for (size_t a = 0; a < sizeof(axes) / sizeof(axes[0]); a++) {
+		int code = axes[a];
+		if (code < 0 || code >= R36J_ABS_MAX) continue;
+		struct r36j_input_absinfo info;
+		if (ioctl(input_fds[i], R36J_EVIOCGABS(code), &info) == 0 && info.maximum > info.minimum) {
+			abs_min[i][code] = info.minimum;
+			abs_max[i][code] = info.maximum;
+			abs_valid[i][code] = 1;
+		}
+	}
+}
+
+static int scale_abs_axis(int fd_idx, int code, int val) {
+	int min_v = -900;
+	int max_v = 900;
+	if (fd_idx >= 0 && fd_idx < R36J_INPUT_COUNT && code >= 0 && code < R36J_ABS_MAX && abs_valid[fd_idx][code]) {
+		min_v = abs_min[fd_idx][code];
+		max_v = abs_max[fd_idx][code];
+	}
+	int center = (min_v + max_v) / 2;
+	int half = (max_v - min_v) / 2;
+	if (half <= 0) return 0;
+
+	int scaled = ((val - center) * 32767) / half;
+	if (scaled < -32767) scaled = -32767;
+	if (scaled > 32767) scaled = 32767;
+	if (scaled > -2500 && scaled < 2500) scaled = 0;
+	return scaled;
 }
 
 static void scan_evdev_inputs(void) {
@@ -138,6 +198,7 @@ void PLAT_pollInput(void) {
 
 		while (read(input_fds[i], &ev, sizeof(ev)) == sizeof(ev)) {
 			if (ev.type == EV_KEY) {
+				if (ev.value > 1) continue;
 				int pressed = ev.value > 0;
 				switch (ev.code) {
 					case CODE_UP:     apply_button_state(BTN_DPAD_UP, BTN_ID_DPAD_UP, pressed, tick); break;
@@ -167,14 +228,17 @@ void PLAT_pollInput(void) {
 						break;
 				}
 			} else if (ev.type == EV_ABS) {
-				// Analog sticks (LRADC AMUX 0-63)
-				int val = ev.value;
+				int scaled = scale_abs_axis(i, ev.code, ev.value);
 				if (ev.code == AXIS_LX) {
-					apply_button_state(BTN_ANALOG_LEFT, BTN_ID_ANALOG_LEFT, val < 20, tick);
-					apply_button_state(BTN_ANALOG_RIGHT, BTN_ID_ANALOG_RIGHT, val > 44, tick);
+					pad.laxis.x = scaled;
+					PAD_setAnalog(BTN_ID_ANALOG_LEFT, BTN_ID_ANALOG_RIGHT, pad.laxis.x, tick + PAD_REPEAT_DELAY);
 				} else if (ev.code == AXIS_LY) {
-					apply_button_state(BTN_ANALOG_UP, BTN_ID_ANALOG_UP, val < 20, tick);
-					apply_button_state(BTN_ANALOG_DOWN, BTN_ID_ANALOG_DOWN, val > 44, tick);
+					pad.laxis.y = scaled;
+					PAD_setAnalog(BTN_ID_ANALOG_UP, BTN_ID_ANALOG_DOWN, pad.laxis.y, tick + PAD_REPEAT_DELAY);
+				} else if (ev.code == AXIS_RX) {
+					pad.raxis.x = scaled;
+				} else if (ev.code == AXIS_RY) {
+					pad.raxis.y = scaled;
 				}
 			}
 		}
@@ -233,7 +297,19 @@ void PLAT_getNetworkStatus(int *is_online) {
 }
 
 void PLAT_enableBacklight(int enable) {
-	SetRawBrightness(enable ? GetBrightness() : 0);
+	FILE* pf = fopen("/sys/class/backlight/sunxi_backlight/bl_power", "w");
+	if (pf) {
+		fprintf(pf, "%d\n", enable ? 0 : 4);
+		fclose(pf);
+	}
+	if (!enable) {
+		SetRawBrightness(0);
+		return;
+	}
+	int value = GetBrightness();
+	int raw = (value * 255) / 10;
+	if (raw < 10 && value > 0) raw = 10;
+	SetRawBrightness(raw);
 }
 
 void PLAT_powerOff(int reboot) {

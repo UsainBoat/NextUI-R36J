@@ -63,6 +63,9 @@ typedef struct ShaderProgram {
 	GLint u_Texture;
 	GLint u_OrigTexture;
 	GLint u_texelSize;
+	GLint a_VertexCoord;
+	GLint a_TexCoord;
+	GLint u_MVP;
 	
 	ShaderParam *pragmas;  // Dynamic array of parsed pragma parameters
 	int num_pragmas;       // Count of valid pragma parameters
@@ -92,7 +95,11 @@ ShaderPass shaders[MAXSHADERS];
 
 // memcpy these in initShaders()
 const ShaderProgram blank_shader_program = {
-	.shader_p = 0, .filename = "stock.glsl"
+	.shader_p = 0, .filename = "stock.glsl",
+	.u_FrameDirection = -1, .u_FrameCount = -1, .u_OutputSize = -1,
+	.u_TextureSize = -1, .u_InputSize = -1, .u_OrigTextureSize = -1,
+	.u_OrigInputSize = -1, .u_Texture = -1, .u_OrigTexture = -1,
+	.u_texelSize = -1, .a_VertexCoord = -1, .a_TexCoord = -1, .u_MVP = -1
 };
 const ShaderPass blank_shader_pass = { .program = NULL,
 	.alpha = 0, .target_texture = 0, .target_updated = 1
@@ -510,6 +517,10 @@ ShaderParam* PLAT_getShaderPragmas(int i) {
 }
 
 void init_shader_program(ShaderProgram * shader, const char * path, const char * filename) {
+	shader->a_VertexCoord = -1;
+	shader->a_TexCoord = -1;
+	shader->u_MVP = -1;
+
 	char filepath[512];
 	snprintf(filepath, sizeof(filepath), "%s/%s", path, filename);
 
@@ -551,6 +562,9 @@ void init_shader_program(ShaderProgram * shader, const char * path, const char *
 		shader->u_Texture = glGetUniformLocation(shader->shader_p, "Texture");
 		shader->u_OrigTexture = glGetUniformLocation(shader->shader_p, "OrigTexture");
 		shader->u_texelSize = glGetUniformLocation(shader->shader_p, "texelSize");
+		shader->a_VertexCoord = glGetAttribLocation(shader->shader_p, "VertexCoord");
+		shader->a_TexCoord = glGetAttribLocation(shader->shader_p, "TexCoord");
+		shader->u_MVP = glGetUniformLocation(shader->shader_p, "MVPMatrix");
 		for (int i = 0; i < shader->num_pragmas; ++i) {
 			shader->pragmas[i].uniformLocation = glGetUniformLocation(shader->shader_p, shader->pragmas[i].name);
 			shader->pragmas[i].value = shader->pragmas[i].def;
@@ -1907,12 +1921,12 @@ void runShaderPass(ShaderPass * shader_pass, GLuint src_texture,
 #endif
 
 	if (shader_program_handle != last_program) {
-		GLint posAttrib = glGetAttribLocation(shader_program_handle, "VertexCoord");
+		GLint posAttrib = shader_program->a_VertexCoord;
 		if (posAttrib >= 0) {
 			glVertexAttribPointer(posAttrib, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 			glEnableVertexAttribArray(posAttrib);
 		}
-		GLint texAttrib = glGetAttribLocation(shader_program_handle, "TexCoord");
+		GLint texAttrib = shader_program->a_TexCoord;
 		if (texAttrib >= 0) {
 			glVertexAttribPointer(texAttrib,  4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
 			glEnableVertexAttribArray(texAttrib);
@@ -1929,7 +1943,7 @@ void runShaderPass(ShaderPass * shader_pass, GLuint src_texture,
 			glUniform1f(shader_program->pragmas[i].uniformLocation, shader_program->pragmas[i].value);
 		}
 
-		GLint u_MVP = glGetUniformLocation(shader_program_handle, "MVPMatrix");
+		GLint u_MVP = shader_program->u_MVP;
 		if (u_MVP >= 0) {
 			float identity[16] = {
 				1,0,0,0,
@@ -1945,13 +1959,12 @@ void runShaderPass(ShaderPass * shader_pass, GLuint src_texture,
 	}
 #if defined(PLATFORM_R36J) || defined(USE_GLES2)
 	else {
-		glUseProgram(shader_program_handle);
-		GLint posAttrib = glGetAttribLocation(shader_program_handle, "VertexCoord");
+		GLint posAttrib = shader_program->a_VertexCoord;
 		if (posAttrib >= 0) {
 			glVertexAttribPointer(posAttrib, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 			glEnableVertexAttribArray(posAttrib);
 		}
-		GLint texAttrib = glGetAttribLocation(shader_program_handle, "TexCoord");
+		GLint texAttrib = shader_program->a_TexCoord;
 		if (texAttrib >= 0) {
 			glVertexAttribPointer(texAttrib,  4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
 			glEnableVertexAttribArray(texAttrib);
@@ -1959,11 +1972,13 @@ void runShaderPass(ShaderPass * shader_pass, GLuint src_texture,
 	}
 #endif
 	if (target_texture) {
+		int check_fbo = (fbo == 0);
 		if (*target_texture != 0 && !glIsTexture(*target_texture)) {
 			*target_texture = 0;
 			shader_pass->target_updated = 1;
 		}
 		if (*target_texture==0 || shader_pass->target_updated || reloadShaderTextures) {
+			check_fbo = 1;
 
 			// if(target_texture) {
 			// 	glDeleteTextures(1,target_texture);
@@ -1988,16 +2003,18 @@ void runShaderPass(ShaderPass * shader_pass, GLuint src_texture,
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *target_texture, 0);
 
-		GLenum  err = glGetError();
-		if (err != GL_NO_ERROR) {
-			LOG_error("Framebuffer error: %d\n", err);
-			LOG_info("Failed to bind framebuffer with texture %u\n", *target_texture);
-		}
+		if (check_fbo) {
+			GLenum  err = glGetError();
+			if (err != GL_NO_ERROR) {
+				LOG_error("Framebuffer error: %d\n", err);
+				LOG_info("Failed to bind framebuffer with texture %u\n", *target_texture);
+			}
 
-        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        if (status != GL_FRAMEBUFFER_COMPLETE) {
-            LOG_error("Framebuffer incomplete: 0x%X\n", status);
-        }
+			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if (status != GL_FRAMEBUFFER_COMPLETE) {
+				LOG_error("Framebuffer incomplete: 0x%X\n", status);
+			}
+		}
 
     } else {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

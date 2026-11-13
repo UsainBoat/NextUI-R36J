@@ -4,7 +4,10 @@
 NEXTUI_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Stop EmulationStation and interfering/unused Batocera services to free RAM and prevent input conflicts
-killall -9 power-service thd retro-hotkeys retro-powerkey retro-battery hotkeygen lircd connmand wpa_supplicant ntpd 2>/dev/null || true
+/etc/init.d/S90hotkeygen stop >/dev/null 2>&1 || true
+/etc/init.d/S60sunxi-joypad stop >/dev/null 2>&1 || true
+/etc/init.d/S13irqbalance stop >/dev/null 2>&1 || true
+killall -9 power-service thd retro-hotkeys retro-powerkey retro-battery hotkeygen sunxi-joypad irqbalance lircd connmand wpa_supplicant ntpd 2>/dev/null || true
 if pidof emulationstation >/dev/null 2>&1; then
 	echo "Stopping EmulationStation..."
 	/etc/init.d/S31emulationstation stop >/dev/null 2>&1 || killall -15 emulationstation || killall -9 emulationstation

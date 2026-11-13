@@ -131,6 +131,18 @@ void InitSettings(void) {
 		loadSettings();
 	}
 
+	if (is_host) {
+		system(
+			"amixer -q -c 0 cset name='AIF1IN0L Mux' 'AIF1_DA0L' >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='AIF1IN0R Mux' 'AIF1_DA0R' >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='DACL Mixer AIF1DA0L Switch' on >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='DACR Mixer AIF1DA0R Switch' on >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='HP_L Mux' 'DACL HPL Switch' >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='HP_R Mux' 'DACR HPR Switch' >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='Headphone Switch' on >/dev/null 2>&1"
+		);
+	}
+
 	SetVolume(GetVolume());
 	SetBrightness(GetBrightness());
 }
@@ -147,18 +159,23 @@ int GetBrightness(void) { return settings ? settings->brightness : SETTINGS_DEFA
 
 #define DISP_LCD_SET_BRIGHTNESS 0x102
 void SetRawBrightness(int val) {
+	if (val < 0) val = 0;
+	if (val > 255) val = 255;
+
+	FILE* f = fopen("/sys/class/backlight/sunxi_backlight/brightness", "w");
+	if (!f) f = fopen("/sys/class/backlight/pwm-backlight/brightness", "w");
+	if (!f) f = fopen("/sys/class/backlight/backlight/brightness", "w");
+	if (f) {
+		fprintf(f, "%d\n", val);
+		fclose(f);
+		return;
+	}
+
 	int fd = open("/dev/disp", O_RDWR);
 	if (fd >= 0) {
 		unsigned long param[4] = {0, (unsigned long)val, 0, 0};
 		ioctl(fd, DISP_LCD_SET_BRIGHTNESS, &param);
 		close(fd);
-		return;
-	}
-	FILE* f = fopen("/sys/class/backlight/pwm-backlight/brightness", "w");
-	if (!f) f = fopen("/sys/class/backlight/backlight/brightness", "w");
-	if (f) {
-		fprintf(f, "%d\n", val);
-		fclose(f);
 	}
 }
 
@@ -251,8 +268,21 @@ int GetVolume(void) {
 }
 
 void SetRawVolume(int val) {
-	char cmd[128];
-	snprintf(cmd, sizeof(cmd), "amixer -q set 'headphone volume' %d%% 2>/dev/null || amixer -q set Master %d%% 2>/dev/null", val, val);
+	if (val < 0) val = 0;
+	if (val > 100) val = 100;
+
+	char cmd[256];
+	if (val == 0) {
+		snprintf(cmd, sizeof(cmd),
+			"amixer -q -c 0 cset name='Master' 0%% >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='External Speaker Switch' off >/dev/null 2>&1");
+	} else {
+		snprintf(cmd, sizeof(cmd),
+			"amixer -q -M -c 0 sset Master %d%% >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='headphone volume' 58 >/dev/null 2>&1; "
+			"amixer -q -c 0 cset name='External Speaker Switch' on >/dev/null 2>&1",
+			val);
+	}
 	system(cmd);
 }
 
