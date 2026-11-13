@@ -19,6 +19,6 @@ adb push "$DIST/version.txt" /userdata/nextui/version.txt
 adb push "$TOOLS/." /userdata/Tools/r36j/
 
 echo "Fixing permissions and running startup setup..."
-adb shell "chmod +x /userdata/nextui/bin/* /userdata/nextui/start_nextui.sh /userdata/nextui/paks/MinUI.pak/launch.sh /userdata/nextui/paks/Emus/*.pak/launch.sh /userdata/Tools/r36j/*.pak/launch.sh && sync"
+adb shell "rm -f /userdata/nextui/lib/libcrypto.so /userdata/nextui/lib/libcrypto.so.* && chmod +x /userdata/nextui/bin/* /userdata/nextui/start_nextui.sh /userdata/nextui/paks/MinUI.pak/launch.sh /userdata/nextui/paks/Emus/*.pak/launch.sh /userdata/Tools/r36j/*.pak/launch.sh && sync"
 
 echo "Deployment complete."

@@ -30,11 +30,12 @@ cp "$SCRIPT_DIR/workspace/all/"*/build/r36j/*.elf "$DIST/bin/"
 cp "$SCRIPT_DIR/workspace/r36j/keymon/keymon.elf" "$DIST/bin/"
 cp "$SCRIPT_DIR/workspace/build/r36j/usr/lib/"*.so "$DIST/lib/"
 cp "$SCRIPT_DIR/workspace/all/minarch/build/r36j/"*.so* "$DIST/lib/" 2>/dev/null || true
+rm -f "$DIST/lib/libcrypto.so" "$DIST/lib/libcrypto.so."*
 cp "$SCRIPT_DIR/workspace/r36j/cores/output/"*.so "$DIST/cores/" 2>/dev/null || true
 
 # Create real copies for shared library symlinks so adb push works cleanly
 cd "$DIST/lib"
-for base in libcrypto.so.3:libcrypto.so liblz4.so.1.9.4:liblz4.so.1 liblz4.so.1.9.4:liblz4.so libsamplerate.so.0.2.2:libsamplerate.so.0 libsamplerate.so.0.2.2:libsamplerate.so libzip.so.4.0:libzip.so.4 libzip.so.4.0:libzip.so; do
+for base in liblz4.so.1.9.4:liblz4.so.1 liblz4.so.1.9.4:liblz4.so libsamplerate.so.0.2.2:libsamplerate.so.0 libsamplerate.so.0.2.2:libsamplerate.so libzip.so.4.0:libzip.so.4 libzip.so.4.0:libzip.so; do
 	src="${base%%:*}"
 	dst="${base##*:}"
 	if [ -f "$src" ]; then

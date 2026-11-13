@@ -103,8 +103,10 @@ else ifneq (,$(filter $(PLATFORM),tg5040 tg5050 h700 my355 r36j))
 all: clean libretro-common libsrm.a rcheevos libchdr $(PREFIX_LOCAL)/include/msettings.h
 	mkdir -p build/$(PLATFORM)
 	cp -L $(PREFIX)/lib/$(CROSS_TRIPLE)/libsamplerate.so.* build/$(PLATFORM) 2>/dev/null || cp -L $(PREFIX)/lib/libsamplerate.so.* build/$(PLATFORM) 2>/dev/null || true
+ifeq (,$(filter $(PLATFORM),r36j))
 	cp -L $(PREFIX)/lib/$(CROSS_TRIPLE)/libcrypto.so.* build/$(PLATFORM) 2>/dev/null || cp -L $(PREFIX)/lib/libcrypto.so.* build/$(PLATFORM) 2>/dev/null || true
 	chmod a+r build/$(PLATFORM)/libcrypto.so.* 2>/dev/null || true
+endif
 	cp -L $(PREFIX)/lib/$(CROSS_TRIPLE)/libzip.so.* build/$(PLATFORM) 2>/dev/null || cp -L $(PREFIX)/lib/libzip.so.* build/$(PLATFORM) 2>/dev/null || true
 	cp -L $(PREFIX)/lib/$(CROSS_TRIPLE)/liblz4.so.* build/$(PLATFORM) 2>/dev/null || cp -L $(PREFIX)/lib/liblz4.so.* build/$(PLATFORM) 2>/dev/null || true
 	cp -L $(PREFIX_LOCAL)/lib/libchdr.so build/$(PLATFORM)/libchdr.so.0 2>/dev/null || true
