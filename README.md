@@ -1,151 +1,101 @@
 <div align="center">
 
-  <img width=128px src="github/logo_outline.png">
+  <img width="128px" src="github/logo_outline.png" alt="NextUI Logo">
 
-</div>
+# NextUI for R36J (R36S Clones)
 
-<hr>
+A port of **[NextUI](https://github.com/LoveRetro/NextUI)** for **R36S clones** built on the **Allwinner A33** (`r36j` / `sun8iw5p1`) with **ARM Mali-400 MP2** graphics running Batocera Linux (`3.4.39`).
 
-<h4 align="center">
-  <a href="https://nextui.loveretro.games/usage/#getting-started" target="_blank">Installation Guide</a>
+<p>
+  <a href="https://github.com/LoveRetro/NextUI" target="_blank">Upstream NextUI</a>
   ·
-  <a href="https://nextui.loveretro.games/docs/" target="_blank">Documentation</a>
+  <a href="https://nextui.loveretro.games/docs/" target="_blank">NextUI Docs</a>
   ·
-  <a href="https://discord.gg/HKd7wqZk3h" target="_blank">Discord</a>
-</h4>
+  <a href="README_R36J.md">R36J Port Notes</a>
+  ·
+  <a href="LICENSE">License</a>
+</p>
 
-<div align="center"><p>
-    <a href="https://github.com/LoveRetro/NextUI/releases/latest">
-      <img alt="Latest release" src="https://img.shields.io/github/v/release/LoveRetro/NextUI?style=for-the-badge&logo=starship&include_prerelease=false&color=C9CBFF&logoColor=D9E0EE&labelColor=302D41&sort=semver" />
-    </a>
-    <a href="https://github.com/LoveRetro/NextUI/pulse">
-      <img alt="Last commit" src="https://img.shields.io/github/last-commit/LoveRetro/NextUI?style=for-the-badge&logo=starship&color=8bd5ca&logoColor=D9E0EE&labelColor=302D41"/>
-    </a>
-    <a href="https://github.com/LoveRetro/NextUI/blob/main/LICENSE">
-      <img alt="License" src="https://img.shields.io/github/license/LoveRetro/NextUI?style=for-the-badge&logo=starship&color=ee999f&logoColor=D9E0EE&labelColor=302D41" />
-    </a>
-    <a href="https://github.com/LoveRetro/NextUI/stargazers">
-      <img alt="Stars" src="https://img.shields.io/github/stars/LoveRetro/NextUI?style=for-the-badge&logo=starship&color=c69ff5&logoColor=D9E0EE&labelColor=302D41" />
-    </a>
-    <a href="https://github.com/LoveRetro/NextUI/issues">
-      <img alt="Issues" src="https://img.shields.io/github/issues/LoveRetro/NextUI?style=for-the-badge&logo=bilibili&color=F5E0DC&logoColor=D9E0EE&labelColor=302D41" />
-    </a>
 </div>
 
 ---
 
-A CFW based of MinUI with a rebuild emulation engine and tons of added features for the TrimUI Brick and Smart Pro. 
+## About Upstream NextUI
 
-For other devices we recommend checking out [MinUI](https://github.com/shauninman/MinUI)
+This fork builds on **[NextUI](https://github.com/LoveRetro/NextUI)** (originally derived from [MinUI](https://github.com/shauninman/MinUI)), bringing NextUI's rebuilt low-latency emulation frontend and quality-of-life features to the R36J while tracking upstream UI, `minarch`, and Pak improvements:
 
-## License
+- **Rebuilt emulation engine (`minarch`)** with low input latency, hardware-accelerated GPU rendering, and [libsamplerate](https://github.com/libsndfile/libsamplerate) audio resampling
+- **Game Switcher** for instant jump-back between recent games
+- **GLSL shaders & PNG overlays**, custom aspect/scaling modes, and cheat support
+- **Game art & game time tracking**, animated scrolling titles, and CJK-capable `Next` font
+- **UI customization** (accent/text colors, fonts, transitions) and **Battery Monitor** (history & time remaining)
+- **Automatic NTP time synchronization** with timezones
 
-This project is licensed under [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
-Personal, educational, and non-commercial use is freely permitted. Commercial use is not.
-See [LICENSE](LICENSE) and [NOTICE](NOTICE) for full details.
-
-> **Note:** This project was previously licensed under GPL 3.0. As of August 15, 2026, the license
-> has changed to PolyForm Noncommercial 1.0.0. The full transition history and rationale
-> is documented in [issue #765](https://github.com/LoveRetro/NextUI/issues/765).
-
-## Changes and additions
-
-- Fixed both screen tearing and sync stutter problems of MinUI by rebuilding the emulator engine core
-- Game switcher menu (Onion OS style) by [@frysee](https://github.com/frysee)
-- High audio quality, due to advanced resampling engine using [libsamplerate](https://github.com/libsndfile/libsamplerate) (with quality/performance setting per emulator)
-- Much lower latency (average 20ms, 1 frame of 60fps)
-- Shaders!
-- Fully OpenGL/GPU based for faster performance!
-- native WiFi support
-- Game art/media support
-- Game time tracker!
-- Cheats support
-- Integrated WiFi
-- Bluetooth Audio
-- Overlays support!
-- Dynamic cpu speed scaling (keeps your device cool and extends battery life, but gives the performance right when needed)
-- Fully GPU OpenGL based for faster performance
-- Custom bootlogos contributed by [@SolvalouArt](https://bsky.app/profile/solvalouart.bsky.social)
-- Color and font settings to customize the NextUI interface
-- Menu animations
-- LED control, change colors, effects, brightness
-- LED indicators, low battery, stand by, charging (brightness can be set seperately)
-- Haptic feedback in the menu by [@ExonakiDev](https://github.com/exonakidev)
-- Ambient LED mode, the LEDS act like Ambient light TV's for extra immersion, configurable per emulator
-- Display controls (color temperature, brightness, contrast, saturation, exposure)
-- Support for automatic NTP time synchronization with timezones and realtime clock (RTC)
-- Deep Sleep mode, gives instant ON and avoids the overheat bug on the Brick by [@zhaofengli](https://github.com/zhaofengli)
-- Battery Monitoring including history graph and time left prediction
-- Scrolling animated titles for longer game names
-- Updated and optimized build emulation cores
-- Rumble strength fixed and is now variable as used by the games
-- FBNeo Arcade screen rotation
-- PAL Mode
-- Next font supports CJK for JP/CN etc rom names
-- Lot of other smaller fixes and optimizations
+For TrimUI and Anbernic H700 devices, see [LoveRetro/NextUI](https://github.com/LoveRetro/NextUI).
 
 ---
 
-## Currently supported devices:
-- Trimui Brick
-- Trimui Brick Pro
-- Trimui Smart Pro
-- Trimui Smart Pro S
-- Anbernic H700 Devices
+## R36J Port Additions
+
+- **Mali-400 MP2 OpenGL ES 2.0 Pipeline**: Forced GLES 2.0 context creation, `#version 100` shader support, and VBO attribute binding in [`generic_video.c`](workspace/all/common/generic_video.c).
+- **Configurable Night Mode**: Built-in f.lux-style warm tinting & optional dimming in **Settings → Display** (`Off` / `On` / `Scheduled`, `2000K`–`6500K`, start/end times, fade duration, and night dim scale), applied uniformly across NextUI, Settings, and `minarch` via GLES2/SDL2.
+- **R36J Hardware Integration (`workspace/r36j/`)**: Raw `evdev` input with D-Pad and dual analog sticks, ALSA `Master` audio, AXP223 battery & backlight via `libmsettings`, dynamic CPU frequency scaling, and LED suppression while active/charging.
+- **USB Wi-Fi & Networking**: Bundled `8821au.ko` driver (RTL8821AU USB Wi-Fi, 2.4 GHz mode), ConnMan integration, and automatic `udev` hotplug activation (`wifi_hotplug.sh`).
+- **Remote Access & Recovery**: Persistent **Dropbear SSH** server on port 22, USB **ADB** hotplug recovery (`adbd_recover.sh`), and a **Restart ADB** tool Pak.
+- **Stock Batocera Bridge (`skeleton/SYSTEM/r36j/start_nextui.sh`)**: Automatically maps existing `/userdata/roms`, `/userdata/cores`, `/userdata/Saves`, `/userdata/Bios`, `/userdata/Cheats`, and `/userdata/Overlays` into NextUI without duplicating files.
+
+> See [README_R36J.md](README_R36J.md) for hardware specs and technical port notes.
 
 ---
 
-## Installing
+## Supported Target
 
-Follow our [installation guide](https://nextui.loveretro.games/usage/#getting-started).
-
----
-
-## How to use
-
-While in menu:
-
-- Hold `start` and press `volume up` or `volume down` to adjust brighness
-- Hold `select` and press `volume up` or `volume down` to adjust color temperature
-- Short press `select` to open the game switcher
-
-While in game:
-
-- `Menu` opens in game options menu, adjusting controls, scaling and what not
-- Hold `menu` and `select` at same time to open up the game switcher
-
-Deep sleep:
-
-When the device is left idle it will enter light sleep. Light sleep turns the screen off and pulses the leds 5 times.
-
-After two minutes the device will go into deep sleep. The leds will turn completely off.
+| Component | Details |
+| :--- | :--- |
+| **Board / SoC** | `r36j` (`sun8iw5p1`) — Allwinner A33 Quad-core Cortex-A7 |
+| **GPU** | ARM Mali-400 MP2 (OpenGL ES 2.0) |
+| **RAM** | 256 MB DDR3 |
+| **Display** | 640×480 MIPI DSI |
+| **Base OS** | Stock Batocera Linux (`3.4.39-armhf-sun8i`) |
 
 ---
 
-## What about X feature?
+## Building & Deploying
 
-NextUI supports a variety of optional extras called Paks that are maintained by community members.
+Requires Docker (`Dockerfile.r36j`):
 
-Our wiki has a [list of all available Paks](https://nextui.loveretro.games/pak-store/) that can be downloaded from our Pak Store straight on your device.
+```sh
+./build_r36j.sh
+```
+
+This builds the `r36j-toolchain` image, compiles all NextUI binaries and `libmsettings` for `PLATFORM=r36j`, and stages the bundle in `workspace/build/r36j/dist/nextui/`.
+
+To deploy to a handheld connected over USB ADB:
+
+```sh
+./deploy_adb.sh
+```
+
+See [README_R36J.md](README_R36J.md#installing--deploying-to-the-handheld-via-adb) for initial boot setup (`batocera.conf` / `custom.sh`) and zram swap recommendations.
 
 ---
 
-## Credits
+## Quick Controls
 
+**In NextUI Menu:**
+- `Select` (short press): Open Game Switcher
+- `Start` + `Vol+` / `Vol-`: Adjust display brightness
+
+**In Game (`minarch`):**
+- `Menu`: Open in-game menu (states, scaling, shaders, controls)
+- `Menu` + `Select`: Open Game Switcher
+
+---
+
+## License & Credits
+
+This project keeps upstream NextUI's **[PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)** license. Personal, educational, and non-commercial use is permitted; commercial use is not. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+- Upstream **[NextUI](https://github.com/LoveRetro/NextUI)** & **[MinUI](https://github.com/shauninman/MinUI)** contributors
 - [josegonzalez](https://github.com/josegonzalez) for [minui-keyboard](https://github.com/josegonzalez/minui-keyboard)
-- [knulli-cfw](https://github.com/knulli-cfw)/[Mikhailzrick](https://github.com/Mikhailzrick) for [fan-control-daemon](https://github.com/knulli-cfw/knulli-linux/commit/5c1b4724330b59cbe8af79d0a7f1dac86f1c221a)
-- [Kenney](www.kenney.nl) for [Input Prompts](https://kenney.nl/assets/input-prompts)
-
----
-
-## Play Retro's review of NextUI
-
-[![image](https://github.com/user-attachments/assets/43217a30-e052-4f67-88a9-c4361f82e72f)](https://www.youtube.com/watch?v=m_7ObMHAFK4)
-
-##  Retro Handhelds' coverage of NextUI
-
-[![image](https://github.com/user-attachments/assets/5fd538ea-285b-46e9-add4-1ef99b2ee9e5)](https://www.youtube.com/watch?v=KlYVmtYDqRI)
-
----
-
-## For all other info visit our website: [nextui.loveretro.games](https://nextui.loveretro.games)
+- [Kenney](https://kenney.nl/assets/input-prompts) for Input Prompts
