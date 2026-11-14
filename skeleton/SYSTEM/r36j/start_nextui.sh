@@ -149,10 +149,14 @@ if [ -f "$NEXTUI_DIR/lib/8821au.ko" ] && [ -d /lib/modules/3.4.39/extra ]; then
 	fi
 fi
 
-# Ensure Wi-Fi powers on when enabled in NextUI or Batocera config
-if grep -q '^wifi=1$' /userdata/.userdata/shared/minuisettings.txt 2>/dev/null || \
-   grep -q '^wifi\.enabled=1$' /userdata/system/batocera.conf 2>/dev/null; then
-	(sleep 1; connmanctl enable wifi >/dev/null 2>&1) </dev/null >/dev/null 2>&1 &
+# Ensure Wi-Fi powers on at boot and on USB dongle hotplug when enabled in settings
+if [ -x "$NEXTUI_DIR/bin/wifi_hotplug.sh" ]; then
+	chmod +x "$NEXTUI_DIR/bin/wifi_hotplug.sh" 2>/dev/null || true
+	cat > /etc/udev/rules.d/99-wifi-hotplug.rules 2>/dev/null <<EOF || true
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan*", RUN+="$NEXTUI_DIR/bin/wifi_hotplug.sh"
+EOF
+	udevadm control --reload-rules >/dev/null 2>&1 || true
+	"$NEXTUI_DIR/bin/wifi_hotplug.sh"
 fi
 
 # Set up Dropbear SSH server on port 22 (persistent host key & authorized_keys under /userdata/system)
