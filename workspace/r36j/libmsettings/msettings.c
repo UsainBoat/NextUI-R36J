@@ -7,11 +7,12 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <stddef.h>
 
 #include "displaycal.h"
 #include "msettings.h"
 
-#define SETTINGS_VERSION 1
+#define SETTINGS_VERSION 2
 typedef struct Settings {
 	int version;
 	int brightness;
@@ -45,6 +46,12 @@ typedef struct Settings {
 	int turbo_l2;
 	int turbo_r1;
 	int turbo_r2;
+	int nightmode_mode;
+	int nightmode_temp;
+	int nightmode_start;
+	int nightmode_end;
+	int nightmode_fade;
+	int nightmode_dim;
 } Settings;
 
 static Settings DefaultSettings = {
@@ -79,6 +86,12 @@ static Settings DefaultSettings = {
 	.turbo_l2 = 0,
 	.turbo_r1 = 0,
 	.turbo_r2 = 0,
+	.nightmode_mode = SETTINGS_DEFAULT_NIGHTMODE_MODE,
+	.nightmode_temp = SETTINGS_DEFAULT_NIGHTMODE_TEMP,
+	.nightmode_start = SETTINGS_DEFAULT_NIGHTMODE_START,
+	.nightmode_end = SETTINGS_DEFAULT_NIGHTMODE_END,
+	.nightmode_fade = SETTINGS_DEFAULT_NIGHTMODE_FADE,
+	.nightmode_dim = SETTINGS_DEFAULT_NIGHTMODE_DIM,
 };
 
 static Settings* settings = NULL;
@@ -93,11 +106,19 @@ static void loadSettings(void) {
 	if (!file) return;
 
 	Settings saved;
-	if (fread(&saved, sizeof(saved), 1, file) == 1 &&
-		saved.version == SETTINGS_VERSION) {
-		memcpy(settings, &saved, sizeof(saved));
-	}
+	size_t nread = fread(&saved, 1, sizeof(saved), file);
 	fclose(file);
+
+	if (nread == sizeof(saved) && saved.version == SETTINGS_VERSION) {
+		memcpy(settings, &saved, sizeof(saved));
+	} else {
+		// Migrate v1 settings files without losing existing preferences.
+		size_t v1_size = offsetof(Settings, nightmode_mode);
+		if (nread >= v1_size && saved.version == 1) {
+			memcpy(settings, &saved, v1_size);
+			settings->version = SETTINGS_VERSION;
+		}
+	}
 }
 
 static inline void SaveSettings(void) {
@@ -357,3 +378,57 @@ int GetMuteTurboR1(void) { return settings ? settings->turbo_r1 : 0; }
 void SetMuteTurboR1(int val) { if (settings) { settings->turbo_r1 = val; SaveSettings(); } }
 int GetMuteTurboR2(void) { return settings ? settings->turbo_r2 : 0; }
 void SetMuteTurboR2(int val) { if (settings) { settings->turbo_r2 = val; SaveSettings(); } }
+
+int GetNightMode(void) { return settings ? settings->nightmode_mode : SETTINGS_DEFAULT_NIGHTMODE_MODE; }
+void SetNightMode(int val) {
+	if (!settings) return;
+	if (val < NIGHTMODE_OFF) val = NIGHTMODE_OFF;
+	if (val > NIGHTMODE_SCHEDULED) val = NIGHTMODE_SCHEDULED;
+	settings->nightmode_mode = val;
+	SaveSettings();
+}
+
+int GetNightModeTemp(void) { return settings ? settings->nightmode_temp : SETTINGS_DEFAULT_NIGHTMODE_TEMP; }
+void SetNightModeTemp(int val) {
+	if (!settings) return;
+	if (val < 2000) val = 2000;
+	if (val > 6500) val = 6500;
+	settings->nightmode_temp = val;
+	SaveSettings();
+}
+
+int GetNightModeStart(void) { return settings ? settings->nightmode_start : SETTINGS_DEFAULT_NIGHTMODE_START; }
+void SetNightModeStart(int val) {
+	if (!settings) return;
+	val %= 1440;
+	if (val < 0) val += 1440;
+	settings->nightmode_start = val;
+	SaveSettings();
+}
+
+int GetNightModeEnd(void) { return settings ? settings->nightmode_end : SETTINGS_DEFAULT_NIGHTMODE_END; }
+void SetNightModeEnd(int val) {
+	if (!settings) return;
+	val %= 1440;
+	if (val < 0) val += 1440;
+	settings->nightmode_end = val;
+	SaveSettings();
+}
+
+int GetNightModeFade(void) { return settings ? settings->nightmode_fade : SETTINGS_DEFAULT_NIGHTMODE_FADE; }
+void SetNightModeFade(int val) {
+	if (!settings) return;
+	if (val < 0) val = 0;
+	if (val > 120) val = 120;
+	settings->nightmode_fade = val;
+	SaveSettings();
+}
+
+int GetNightModeDim(void) { return settings ? settings->nightmode_dim : SETTINGS_DEFAULT_NIGHTMODE_DIM; }
+void SetNightModeDim(int val) {
+	if (!settings) return;
+	if (val < 40) val = 40;
+	if (val > 100) val = 100;
+	settings->nightmode_dim = val;
+	SaveSettings();
+}

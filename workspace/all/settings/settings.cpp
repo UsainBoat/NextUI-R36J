@@ -633,6 +633,71 @@ int main(int argc, char *argv[])
                 { SetDisplayCalBlueGain(std::any_cast<int>(value)); },
                 [defaultDisplayCal]() { SetDisplayCalBlueGain(defaultDisplayCal.blue_gain); }});
         }
+#ifdef PLATFORM_R36J
+        {
+            static const std::vector<std::any> nightmode_values = {NIGHTMODE_OFF, NIGHTMODE_ON, NIGHTMODE_SCHEDULED};
+            static const std::vector<std::string> nightmode_labels = {"Off", "On", "Scheduled"};
+
+            std::vector<std::any> temp_values;
+            std::vector<std::string> temp_labels;
+            for (int k = 2000; k <= 6500; k += 100) {
+                temp_values.push_back(k);
+                temp_labels.push_back(std::to_string(k) + "K");
+            }
+
+            std::vector<std::any> time_values;
+            std::vector<std::string> time_labels;
+            for (int m = 0; m < 1440; m += 30) {
+                char buf[8];
+                snprintf(buf, sizeof(buf), "%02d:%02d", m / 60, m % 60);
+                time_values.push_back(m);
+                time_labels.push_back(buf);
+            }
+
+            static const std::vector<std::any> fade_values = {0, 15, 30, 45, 60, 90, 120};
+            static const std::vector<std::string> fade_labels = {"Off", "15m", "30m", "45m", "60m", "90m", "2h"};
+
+            static const std::vector<std::any> dim_values = {100, 90, 80, 70, 60, 50, 40};
+            static const std::vector<std::string> dim_labels = {"Off (100%)", "90%", "80%", "70%", "60%", "50%", "40%"};
+
+            displayItems.push_back(
+                new MenuItem{ListItemType::Generic, "Night mode", "Warm screen tint and optional night dimming",
+                nightmode_values, nightmode_labels,
+                []() -> std::any { return GetNightMode(); },
+                [](const std::any &value) { SetNightMode(std::any_cast<int>(value)); },
+                []() { SetNightMode(SETTINGS_DEFAULT_NIGHTMODE_MODE); }});
+            displayItems.push_back(
+                new MenuItem{ListItemType::Generic, "Night temperature", "Target warmth when Night mode is active (2000K-6500K)",
+                temp_values, temp_labels,
+                []() -> std::any { return GetNightModeTemp(); },
+                [](const std::any &value) { SetNightModeTemp(std::any_cast<int>(value)); },
+                []() { SetNightModeTemp(SETTINGS_DEFAULT_NIGHTMODE_TEMP); }});
+            displayItems.push_back(
+                new MenuItem{ListItemType::Generic, "Night start", "Scheduled start time (24h local time)",
+                time_values, time_labels,
+                []() -> std::any { return GetNightModeStart(); },
+                [](const std::any &value) { SetNightModeStart(std::any_cast<int>(value)); },
+                []() { SetNightModeStart(SETTINGS_DEFAULT_NIGHTMODE_START); }});
+            displayItems.push_back(
+                new MenuItem{ListItemType::Generic, "Night end", "Scheduled end time (24h local time)",
+                time_values, time_labels,
+                []() -> std::any { return GetNightModeEnd(); },
+                [](const std::any &value) { SetNightModeEnd(std::any_cast<int>(value)); },
+                []() { SetNightModeEnd(SETTINGS_DEFAULT_NIGHTMODE_END); }});
+            displayItems.push_back(
+                new MenuItem{ListItemType::Generic, "Night fade", "Transition duration at schedule boundaries",
+                fade_values, fade_labels,
+                []() -> std::any { return GetNightModeFade(); },
+                [](const std::any &value) { SetNightModeFade(std::any_cast<int>(value)); },
+                []() { SetNightModeFade(SETTINGS_DEFAULT_NIGHTMODE_FADE); }});
+            displayItems.push_back(
+                new MenuItem{ListItemType::Generic, "Night dim", "Additional brightness scale while Night mode is active",
+                dim_values, dim_labels,
+                []() -> std::any { return GetNightModeDim(); },
+                [](const std::any &value) { SetNightModeDim(std::any_cast<int>(value)); },
+                []() { SetNightModeDim(SETTINGS_DEFAULT_NIGHTMODE_DIM); }});
+        }
+#endif
         displayItems.push_back(
             new MenuItem{ListItemType::Button, "Reset to defaults", "Resets all options in this menu to their default values.", ResetCurrentMenu});
 

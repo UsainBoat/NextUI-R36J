@@ -155,6 +155,233 @@ static int device_height;
 static int device_pitch;
 static uint32_t SDL_transparentBlack = 0;
 
+#ifdef PLATFORM_R36J
+#include <time.h>
+
+static GLuint s_night_prog = 0;
+static GLuint s_night_vbo = 0;
+static GLint s_night_pos_loc = -1;
+static GLint s_night_gain_loc = -1;
+
+static void kelvinToRgb(float kelvin, float* r, float* g, float* b) {
+	if (kelvin >= 6500.0f) {
+		*r = 1.0f; *g = 1.0f; *b = 1.0f;
+		return;
+	}
+	if (kelvin < 1000.0f) kelvin = 1000.0f;
+
+	float temp = kelvin * 0.01f;
+	float cr = 255.0f;
+	float cg = 99.4708025861f * logf(temp) - 161.1195681661f;
+	float cb = (temp <= 19.0f) ? 0.0f : (138.5177312231f * logf(temp - 10.0f) - 305.0447927307f);
+
+	// Normalize to (1.0, 1.0, 1.0) at 6500K (Tanner Helland: 255.0, 254.11, 250.04)
+	*r = fminf(fmaxf(cr / 255.0f, 0.0f), 1.0f);
+	*g = fminf(fmaxf(cg / 254.11f, 0.0f), 1.0f);
+	*b = fminf(fmaxf(cb / 250.04f, 0.0f), 1.0f);
+}
+
+static int nightModeGetGain(float* out_r, float* out_g, float* out_b) {
+	static Uint32 last_eval_ms = 0;
+	static int last_mode = -1, last_temp = -1, last_start = -1, last_end = -1, last_fade = -1, last_dim = -1;
+	static float cached_r = 1.0f, cached_g = 1.0f, cached_b = 1.0f;
+	static int cached_active = 0;
+
+	if (!InitializedSettings()) {
+		*out_r = *out_g = *out_b = 1.0f;
+		return 0;
+	}
+
+	int mode = GetNightMode();
+	int target_temp = GetNightModeTemp();
+	int start_min = GetNightModeStart();
+	int end_min = GetNightModeEnd();
+	int fade_min = GetNightModeFade();
+	int dim_pct = GetNightModeDim();
+
+	Uint32 now_ms = SDL_GetTicks();
+	int params_changed = (mode != last_mode || target_temp != last_temp ||
+	                      start_min != last_start || end_min != last_end ||
+	                      fade_min != last_fade || dim_pct != last_dim);
+
+	if (!params_changed && (mode != NIGHTMODE_SCHEDULED || (now_ms - last_eval_ms) < 500)) {
+		*out_r = cached_r;
+		*out_g = cached_g;
+		*out_b = cached_b;
+		return cached_active;
+	}
+
+	last_eval_ms = now_ms;
+	last_mode = mode;
+	last_temp = target_temp;
+	last_start = start_min;
+	last_end = end_min;
+	last_fade = fade_min;
+	last_dim = dim_pct;
+
+	float t = 0.0f;
+	if (mode == NIGHTMODE_ON) {
+		t = 1.0f;
+	} else if (mode == NIGHTMODE_SCHEDULED) {
+		time_t now_t = time(NULL);
+		struct tm tm_now;
+		if (localtime_r(&now_t, &tm_now)) {
+			const int DAY_SEC = 86400;
+			int now_sec = tm_now.tm_hour * 3600 + tm_now.tm_min * 60 + tm_now.tm_sec;
+			int start_sec = (((start_min % 1440) + 1440) % 1440) * 60;
+			int end_sec = (((end_min % 1440) + 1440) % 1440) * 60;
+			int fade_sec = (fade_min > 0 ? fade_min : 0) * 60;
+
+			if (start_sec == end_sec) {
+				t = 1.0f;
+			} else {
+				int window_len = (end_sec - start_sec + DAY_SEC) % DAY_SEC;
+				int elapsed = (now_sec - start_sec + DAY_SEC) % DAY_SEC;
+				if (elapsed < window_len) {
+					int eff_fade = fade_sec;
+					if (eff_fade * 2 > window_len) eff_fade = window_len / 2;
+					if (eff_fade > 0 && elapsed < eff_fade)
+						t = (float)elapsed / (float)eff_fade;
+					else if (eff_fade > 0 && elapsed > window_len - eff_fade)
+						t = (float)(window_len - elapsed) / (float)eff_fade;
+					else
+						t = 1.0f;
+					t = t * t * (3.0f - 2.0f * t);
+				}
+			}
+		}
+	}
+
+	if (t <= 0.0f) {
+		cached_r = cached_g = cached_b = 1.0f;
+		cached_active = 0;
+	} else {
+		float eff_kelvin = 6500.0f - t * (6500.0f - (float)target_temp);
+		kelvinToRgb(eff_kelvin, &cached_r, &cached_g, &cached_b);
+		float dim_scale = 1.0f - t * (1.0f - ((float)dim_pct * 0.01f));
+		cached_r *= dim_scale;
+		cached_g *= dim_scale;
+		cached_b *= dim_scale;
+		cached_active = (cached_r < 0.996f || cached_g < 0.996f || cached_b < 0.996f);
+	}
+
+	*out_r = cached_r;
+	*out_g = cached_g;
+	*out_b = cached_b;
+	return cached_active;
+}
+
+static void applyNightModeSDL(void) {
+	float r, g, b;
+	if (!nightModeGetGain(&r, &g, &b)) return;
+	Uint8 ur = (Uint8)(r * 255.0f + 0.5f);
+	Uint8 ug = (Uint8)(g * 255.0f + 0.5f);
+	Uint8 ub = (Uint8)(b * 255.0f + 0.5f);
+	SDL_BlendMode prev_mode = SDL_BLENDMODE_BLEND;
+	SDL_GetRenderDrawBlendMode(vid.renderer, &prev_mode);
+	SDL_SetRenderDrawBlendMode(vid.renderer, SDL_BLENDMODE_MUL);
+	SDL_SetRenderDrawColor(vid.renderer, ur, ug, ub, 255);
+	SDL_RenderFillRect(vid.renderer, NULL);
+	SDL_SetRenderDrawBlendMode(vid.renderer, prev_mode);
+}
+
+static void initNightModeGLES(void) {
+	if (s_night_prog) return;
+
+	static const char* vs_src =
+		"attribute vec2 aPos;\n"
+		"void main() { gl_Position = vec4(aPos, 0.0, 1.0); }\n";
+	static const char* fs_src =
+		"precision mediump float;\n"
+		"uniform vec3 uGain;\n"
+		"void main() { gl_FragColor = vec4(uGain, 1.0); }\n";
+
+	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vs, 1, &vs_src, NULL);
+	glCompileShader(vs);
+
+	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fs, 1, &fs_src, NULL);
+	glCompileShader(fs);
+
+	GLuint prog = glCreateProgram();
+	glAttachShader(prog, vs);
+	glAttachShader(prog, fs);
+	glLinkProgram(prog);
+	glDeleteShader(vs);
+	glDeleteShader(fs);
+
+	GLint linked = GL_FALSE;
+	glGetProgramiv(prog, GL_LINK_STATUS, &linked);
+	if (linked != GL_TRUE) {
+		glDeleteProgram(prog);
+		return;
+	}
+
+	s_night_prog = prog;
+	s_night_pos_loc = glGetAttribLocation(prog, "aPos");
+	s_night_gain_loc = glGetUniformLocation(prog, "uGain");
+
+	static const float quad[8] = {
+		-1.0f,  1.0f,
+		-1.0f, -1.0f,
+		 1.0f,  1.0f,
+		 1.0f, -1.0f,
+	};
+	glGenBuffers(1, &s_night_vbo);
+	GLint prev_vbo = 0;
+	glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &prev_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, s_night_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, (GLuint)prev_vbo);
+}
+
+static void applyNightModeGLES(void) {
+	float r, g, b;
+	if (!nightModeGetGain(&r, &g, &b)) return;
+	if (!s_night_prog) initNightModeGLES();
+	if (!s_night_prog || s_night_pos_loc < 0 || s_night_gain_loc < 0) return;
+
+	GLint prev_prog = 0, prev_vbo = 0, prev_fbo = 0;
+	GLint prev_src_rgb = GL_SRC_ALPHA, prev_dst_rgb = GL_ONE_MINUS_SRC_ALPHA;
+	GLint prev_vp[4] = {0, 0, device_width, device_height};
+	GLboolean was_blend = glIsEnabled(GL_BLEND);
+	glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
+	glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &prev_vbo);
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
+	glGetIntegerv(GL_BLEND_SRC_RGB, &prev_src_rgb);
+	glGetIntegerv(GL_BLEND_DST_RGB, &prev_dst_rgb);
+	glGetIntegerv(GL_VIEWPORT, prev_vp);
+
+	if (prev_fbo != 0) glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, device_width, device_height);
+	if (!was_blend) glEnable(GL_BLEND);
+	glBlendFunc(GL_DST_COLOR, GL_ZERO);
+
+	glUseProgram(s_night_prog);
+	glUniform3f(s_night_gain_loc, r, g, b);
+	glBindBuffer(GL_ARRAY_BUFFER, s_night_vbo);
+	glVertexAttribPointer(s_night_pos_loc, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(s_night_pos_loc);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDisableVertexAttribArray(s_night_pos_loc);
+
+	glBindBuffer(GL_ARRAY_BUFFER, (GLuint)prev_vbo);
+	glUseProgram((GLuint)prev_prog);
+	glBlendFunc((GLenum)prev_src_rgb, (GLenum)prev_dst_rgb);
+	if (!was_blend) glDisable(GL_BLEND);
+	glViewport(prev_vp[0], prev_vp[1], prev_vp[2], prev_vp[3]);
+	if (prev_fbo != 0) glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+}
+
+static void quitNightModeGLES(void) {
+	if (s_night_prog) { glDeleteProgram(s_night_prog); s_night_prog = 0; }
+	if (s_night_vbo) { glDeleteBuffers(1, &s_night_vbo); s_night_vbo = 0; }
+	s_night_pos_loc = -1;
+	s_night_gain_loc = -1;
+}
+#endif
+
 #define OVERLAYS_FOLDER SDCARD_PATH "/Overlays"
 
 static char* overlay_path = NULL;
@@ -845,6 +1072,9 @@ void PLAT_quitVideo(void) {
 	if (vid.stream_layer1) SDL_DestroyTexture(vid.stream_layer1);
 
 	// Ensure all pending GL operations complete before destroying renderer/context
+#ifdef PLATFORM_R36J
+	quitNightModeGLES();
+#endif
 	SDL_RenderFlush(vid.renderer);
 	glFinish();
 
@@ -1775,6 +2005,9 @@ void PLAT_flip(SDL_Surface* IGNORED, int ignored) {
 		SDL_RenderCopy(vid.renderer, vid.target_layer3, NULL, NULL);
 		SDL_RenderCopy(vid.renderer, vid.target_layer4, NULL, NULL);
 		SDL_RenderCopy(vid.renderer, vid.target_layer5, NULL, NULL);
+#ifdef PLATFORM_R36J
+		applyNightModeSDL();
+#endif
         SDL_RenderPresent(vid.renderer);
         return;
     }
@@ -1791,6 +2024,9 @@ void PLAT_flip(SDL_Surface* IGNORED, int ignored) {
         SDL_RenderCopy(vid.renderer, vid.target_layer3, NULL, NULL);
         SDL_RenderCopy(vid.renderer, vid.target_layer4, NULL, NULL);
         SDL_RenderCopy(vid.renderer, vid.target_layer5, NULL, NULL);
+#ifdef PLATFORM_R36J
+        applyNightModeSDL();
+#endif
         SDL_RenderPresent(vid.renderer);
         return;
     }
@@ -1821,6 +2057,9 @@ void PLAT_flip(SDL_Surface* IGNORED, int ignored) {
 
     SDL_RenderCopy(vid.renderer, target, src_rect, dst_rect);
 
+#ifdef PLATFORM_R36J
+    applyNightModeSDL();
+#endif
     SDL_RenderPresent(vid.renderer);
     vid.blit = NULL;
 }
@@ -2414,6 +2653,9 @@ void PLAT_GL_Swap() {
 			notif.x, notif.y, notif.tex_w, notif.tex_h);
     }
 
+#ifdef PLATFORM_R36J
+	applyNightModeGLES();
+#endif
 	SDL_GL_SwapWindow(vid.window);
 
     frame_count++;

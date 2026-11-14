@@ -10,6 +10,17 @@
 #define SETTINGS_DEFAULT_HEADPHONE_VOLUME 4
 #define SETTINGS_DEFAULT_FAN_SPEED 0
 
+#define NIGHTMODE_OFF 0
+#define NIGHTMODE_ON 1
+#define NIGHTMODE_SCHEDULED 2
+
+#define SETTINGS_DEFAULT_NIGHTMODE_MODE NIGHTMODE_OFF
+#define SETTINGS_DEFAULT_NIGHTMODE_TEMP 3400
+#define SETTINGS_DEFAULT_NIGHTMODE_START (20 * 60)
+#define SETTINGS_DEFAULT_NIGHTMODE_END (7 * 60)
+#define SETTINGS_DEFAULT_NIGHTMODE_FADE 30
+#define SETTINGS_DEFAULT_NIGHTMODE_DIM 100
+
 #define SETTINGS_DEFAULT_MUTE_NO_CHANGE -69
 
 void InitSettings(void);
@@ -104,5 +115,19 @@ void SetMuteTurboL1(int);
 void SetMuteTurboL2(int);
 void SetMuteTurboR1(int);
 void SetMuteTurboR2(int);
+
+int GetNightMode(void);
+int GetNightModeTemp(void);
+int GetNightModeStart(void);
+int GetNightModeEnd(void);
+int GetNightModeFade(void);
+int GetNightModeDim(void);
+
+void SetNightMode(int value);       // 0=Off, 1=On, 2=Scheduled
+void SetNightModeTemp(int value);   // 2000-6500 (Kelvin)
+void SetNightModeStart(int value);  // 0-1439 (minutes since midnight)
+void SetNightModeEnd(int value);    // 0-1439 (minutes since midnight)
+void SetNightModeFade(int value);   // 0-120 (minutes)
+void SetNightModeDim(int value);    // 40-100 (percent brightness)
 
 #endif  // __msettings_h__
